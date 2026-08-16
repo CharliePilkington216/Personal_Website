@@ -1,8 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module JWT where
+-- module to handle the creation and verification of JWTs for authentication
+module JWT (createAccessToken, createRefreshToken, verifyAccessToken, verifyRefreshToken) where
 
-import Control.Lens ((&), (.~), (^.), preview)
+import Control.Lens ((&), (.~), (^.), preview, review)
 import Control.Monad.Except (runExceptT, throwError)
 import Crypto.JOSE.Header (Protection (Protected))
 import Crypto.JOSE.JWK (JWK, fromOctets)
@@ -64,9 +65,9 @@ mkSigningKey secret = fromOctets (TE.encodeUtf8 secret)
 
 -- Build and sign a JWT with sub, iss, aud, iat, exp, and type.
 --
--- adminId   - the admin's UUID (as Text), becomes the sub claim
--- domain    - used as both iss and aud, e.g. "charliepilkington.uk"
--- jwtSecret - the raw HMAC secret from Config
+-- adminId   - the admin's UUID (as Text)
+-- jwtSecret - the JWT secret from Config
+-- domain    - used as both iss and aud
 createSignedToken :: TokenType -> Text -> Text -> Text -> IO (Either JWTError Text)
 createSignedToken tokenType adminId jwtSecret domain = runExceptT $ do
   now <- liftIO getCurrentTime
@@ -86,22 +87,18 @@ createSignedToken tokenType adminId jwtSecret domain = runExceptT $ do
   jwt <- signClaims key (newJWSHeader (Protected, alg)) claims
   pure (TE.decodeUtf8 (BSL.toStrict (encodeCompact jwt)))
 
--- exposed functions to create JWT of both types
-
-createAccessToken :: Text -> Text -> Text -> IO (Either JWTError Text)
-createAccessToken = createSignedToken AccessType
-
-createRefreshToken :: Text -> Text -> Text -> IO (Either JWTError Text)
-createRefreshToken = createSignedToken RefreshType
-
--- | 2. Verify a signed access-token JWT.
+-- Verify a signed JWT.
+--
+-- tokenText    - the JWT
+-- jwtSecret - the JWT secret from Config
+-- domain    - used as both iss and aud
 --
 -- Checks: signature validity, exp/iat (handled by verifyClaims),
 -- iss == domain, aud contains domain, and the custom "type" claim
 -- equals "access" (so a refresh token can't be replayed as an access
--- token). Returns the admin_id (sub) on success.
-verifyAccessToken :: Text -> Text -> Text -> IO (Either String Text)
-verifyAccessToken domain jwtSecret tokenText = do
+-- token).
+verifyToken :: TokenType -> Text -> Text -> Text -> IO (Either String Text)
+verifyToken tokenType domain jwtSecret tokenText = do
   result <- runExceptT $ do
     let key = mkSigningKey jwtSecret
     expectedIssuer <- maybe (throwError "invalid domain configured") pure
@@ -115,11 +112,25 @@ verifyAccessToken domain jwtSecret tokenText = do
                 jwt
               `orError` "signature or claim validation failed"
     subj <- maybe (throwError "missing sub claim") pure (claims ^. claimSub)
-    let tokenType = HM.lookup "type" (claims ^. unregisteredClaims)
-    if tokenType /= Just (String "access")
-      then throwError "not an access token"
+    let claimedTokenType = HM.lookup "type" (claims ^. unregisteredClaims)
+    if claimedTokenType /= Just (String (tokenTypeText tokenType))
+      then throwError "incorrect token type"
       else pure (toText subj)
   pure result
   where
     orError action msg = action >>= either (const (throwError msg)) pure
-    toText = TE.decodeUtf8 . BSL.toStrict . encodeCompact . pure -- placeholder, see note below
+    toText = review stringOrUri
+
+-- exposed functions to create JWT of both types and verify them
+
+createAccessToken :: Text -> Text -> Text -> IO (Either JWTError Text)
+createAccessToken = createSignedToken AccessType
+
+createRefreshToken :: Text -> Text -> Text -> IO (Either JWTError Text)
+createRefreshToken = createSignedToken RefreshType
+
+verifyAccessToken :: Text -> Text -> Text -> IO (Either String Text)
+verifyAccessToken = verifyToken AccessType
+
+verifyRefreshToken :: Text -> Text -> Text -> IO (Either String Text)
+verifyRefreshToken = verifyToken RefreshType
