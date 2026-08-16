@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 -- module to load in environment variables
-module Config where
+module Config (Config, authDbConnString, portfolioDbConnString, inquiryDbConnString, jwtSecret, loadConfig) where
 
 import Configuration.Dotenv (loadFile, defaultConfig)
 import Data.Text (Text)

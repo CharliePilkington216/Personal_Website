@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 -- module to ensure passwords and tokens are never stored in plaintext or exposed by db leak
-module Crypto where
+module Crypto (saltedHashPassword, checkPassword, hashToken) where
 
 import Crypto.BCrypt
   ( hashPasswordUsingPolicy
