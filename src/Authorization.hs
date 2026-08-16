@@ -16,7 +16,7 @@ import Web.Cookie (SetCookie)
 data LogInRequest = LogInRequest
   { email :: Text
   , password :: Text
-  } deriving (Show, Generic) 
+  } deriving (Generic) 
 
 instance FromJSON LogInRequest
 
@@ -24,7 +24,7 @@ instance FromJSON LogInRequest
 
 data AccessToken = AccessToken
   { token :: Text
-  } deriving (Show, Generic)
+  } deriving (Generic)
 
 instance ToJSON AccessToken
 
@@ -40,7 +40,7 @@ type AuthAPI = "login"
                 :> Post '[JSON] (Headers '[Header "Set-Cookie" SetCookie] LogInResponse)
           :<|> "refresh" 
                 :> Header' '[Required, Strict] "Cookie" Text 
-                :> Post '[JSON] RefreshResponse
+                :> Post '[JSON] (Headers '[Header "Set-Cookie" SetCookie] RefreshResponse)
           :<|> "logout" 
                 :> Header' '[Required, Strict] "Cookie" Text 
-                :> PostNoContent '[JSON] (Headers '[Header "Set-Cookie" SetCookie] NoContent)
+                :> Post '[JSON] (Headers '[Header "Set-Cookie" SetCookie] NoContent)
