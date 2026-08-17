@@ -63,13 +63,14 @@ tokenLifetime RefreshType = refreshTokenLifeTime
 mkSigningKey :: Text -> JWK
 mkSigningKey secret = fromOctets (TE.encodeUtf8 secret)
 
--- Build and sign a JWT with sub, iss, aud, iat, exp, and type.
+-- Build and sign a JWT with sub, iss, aud, iat, exp, type, and session.
 --
 -- adminId   - the admin's UUID (as Text)
+-- sessionId - the session's UUID (as Text)
 -- jwtSecret - the JWT secret from Config
 -- domain    - used as both iss and aud
-createSignedToken :: TokenType -> Text -> Text -> Text -> IO (Either JWTError Text)
-createSignedToken tokenType adminId jwtSecret domain = runExceptT $ do
+createSignedToken :: TokenType -> Text -> Text -> Text -> Text -> IO (Either JWTError Text)
+createSignedToken tokenType adminId sessionId jwtSecret domain = runExceptT $ do
   now <- liftIO getCurrentTime
   let key         = mkSigningKey jwtSecret
       expiry      = addUTCTime (tokenLifetime tokenType) now
@@ -83,21 +84,25 @@ createSignedToken tokenType adminId jwtSecret domain = runExceptT $ do
           & claimIat .~ Just (NumericDate now)
           & claimExp .~ Just (NumericDate expiry)
           & addClaim "type" (String (tokenTypeText tokenType))
+          & addClaim "session" (String sessionId)
   alg <- bestJWSAlg key
   jwt <- signClaims key (newJWSHeader (Protected, alg)) claims
   pure (TE.decodeUtf8 (BSL.toStrict (encodeCompact jwt)))
 
 -- Verify a signed JWT.
 --
--- tokenText    - the JWT
--- jwtSecret - the JWT secret from Config
+-- tokenType - the expected token type ("access" or "refresh")
 -- domain    - used as both iss and aud
+-- jwtSecret - the JWT secret from Config
+-- tokenText - the JWT
 --
 -- Checks: signature validity, exp/iat (handled by verifyClaims),
 -- iss == domain, aud contains domain, and the custom "type" claim
--- equals "access" (so a refresh token can't be replayed as an access
--- token).
-verifyToken :: TokenType -> Text -> Text -> Text -> IO (Either String Text)
+-- matches tokenType (so a refresh token can't be replayed as an
+-- access token, or vice versa).
+--
+-- Returns (admin_id, session_id) from the sub and session claims.
+verifyToken :: TokenType -> Text -> Text -> Text -> IO (Either String (Text, Text))
 verifyToken tokenType domain jwtSecret tokenText = do
   result <- runExceptT $ do
     let key = mkSigningKey jwtSecret
@@ -112,10 +117,13 @@ verifyToken tokenType domain jwtSecret tokenText = do
                 jwt
               `orError` "signature or claim validation failed"
     subj <- maybe (throwError "missing sub claim") pure (claims ^. claimSub)
+    sessionId <- case HM.lookup "session" (claims ^. unregisteredClaims) of
+                   Just (String s) -> pure s
+                   _               -> throwError "missing or invalid session claim"
     let claimedTokenType = HM.lookup "type" (claims ^. unregisteredClaims)
     if claimedTokenType /= Just (String (tokenTypeText tokenType))
       then throwError "incorrect token type"
-      else pure (toText subj)
+      else pure (toText subj, sessionId)
   pure result
   where
     orError action msg = action >>= either (const (throwError msg)) pure
@@ -123,14 +131,14 @@ verifyToken tokenType domain jwtSecret tokenText = do
 
 -- exposed functions to create JWT of both types and verify them
 
-createAccessToken :: Text -> Text -> Text -> IO (Either JWTError Text)
+createAccessToken :: Text -> Text -> Text -> Text -> IO (Either JWTError Text)
 createAccessToken = createSignedToken AccessType
 
-createRefreshToken :: Text -> Text -> Text -> IO (Either JWTError Text)
+createRefreshToken :: Text -> Text -> Text -> Text -> IO (Either JWTError Text)
 createRefreshToken = createSignedToken RefreshType
 
-verifyAccessToken :: Text -> Text -> Text -> IO (Either String Text)
+verifyAccessToken :: Text -> Text -> Text -> IO (Either String (Text, Text))
 verifyAccessToken = verifyToken AccessType
 
-verifyRefreshToken :: Text -> Text -> Text -> IO (Either String Text)
+verifyRefreshToken :: Text -> Text -> Text -> IO (Either String (Text, Text))
 verifyRefreshToken = verifyToken RefreshType
