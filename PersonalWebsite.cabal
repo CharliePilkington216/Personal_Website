@@ -78,6 +78,7 @@ library
                       , servant-server
                       , text
                       , time
+                      , transformers
                       , unordered-containers
                       
     default-language:   Haskell2010
@@ -104,3 +105,24 @@ executable PersonalWebsite
 
     -- Base language which the package is written in.
     default-language: Haskell2010
+
+test-suite PersonalWebsite-test
+    import:             warnings
+
+    type:               exitcode-stdio-1.0
+
+    main-is:            Spec.hs
+
+    hs-source-dirs:     test
+
+    other-modules:      CryptoSpec
+                      , JWTSpec
+
+    build-depends:      base ^>=4.20.2.0
+                      , PersonalWebsite
+                      , hspec
+                      , text
+
+    build-tool-depends: hspec-discover:hspec-discover
+
+    default-language:   Haskell2010
