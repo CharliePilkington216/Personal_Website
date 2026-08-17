@@ -92,7 +92,6 @@ createSignedToken tokenType adminId sessionId jwtSecret domain = runExceptT $ do
 
 -- Verify a signed JWT.
 --
--- tokenType - the expected token type ("access" or "refresh")
 -- tokenText - the JWT
 -- jwtSecret - the JWT secret from Config
 -- domain    - used as both iss and aud
