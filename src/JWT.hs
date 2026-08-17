@@ -5,6 +5,7 @@ module JWT (createAccessToken, createRefreshToken, verifyAccessToken, verifyRefr
 
 import Control.Lens ((&), (.~), (^.), preview, review)
 import Control.Monad.Except (runExceptT, throwError)
+import Control.Monad.IO.Class (liftIO)
 import Crypto.JOSE.Header (Protection (Protected))
 import Crypto.JOSE.JWK (JWK, fromOctets)
 import Crypto.JWT
@@ -92,9 +93,9 @@ createSignedToken tokenType adminId sessionId jwtSecret domain = runExceptT $ do
 -- Verify a signed JWT.
 --
 -- tokenType - the expected token type ("access" or "refresh")
--- domain    - used as both iss and aud
--- jwtSecret - the JWT secret from Config
 -- tokenText - the JWT
+-- jwtSecret - the JWT secret from Config
+-- domain    - used as both iss and aud
 --
 -- Checks: signature validity, exp/iat (handled by verifyClaims),
 -- iss == domain, aud contains domain, and the custom "type" claim
@@ -103,7 +104,7 @@ createSignedToken tokenType adminId sessionId jwtSecret domain = runExceptT $ do
 --
 -- Returns (admin_id, session_id) from the sub and session claims.
 verifyToken :: TokenType -> Text -> Text -> Text -> IO (Either String (Text, Text))
-verifyToken tokenType domain jwtSecret tokenText = do
+verifyToken tokenType tokenText jwtSecret domain = do
   result <- runExceptT $ do
     let key = mkSigningKey jwtSecret
     expectedIssuer <- maybe (throwError "invalid domain configured") pure
