@@ -5,7 +5,7 @@
 {-# LANGUAGE TypeOperators #-}
 
 -- module to organise the /auth section of the API
-module Authorization (AuthAPI, authServer) where
+module Authorization (AuthAPI, authServer, runTransaction) where
 
 import Database (DB)
 import Data.Text (Text)
@@ -59,7 +59,7 @@ authServer db = loginHandler db :<|> refreshHandler db :<|> logoutHandler db
 -- endpoint definitions
 
 loginHandler :: DB -> LogInRequest -> Handler (Headers '[Header "Set-Cookie" SetCookie] LogInResponse)
-loginHandler = undefined
+loginHandler = undefined 
 
 refreshHandler :: DB -> (Text, Text, Text) -> Handler (Headers '[Header "Set-Cookie" SetCookie] RefreshResponse)
 refreshHandler = undefined
