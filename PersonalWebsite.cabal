@@ -62,6 +62,7 @@ library
                       , Crypto
                       , JWT
                       , Authorization
+                      , Portfolio
 
     build-depends:      base ^>=4.20.2.0
                       , aeson
