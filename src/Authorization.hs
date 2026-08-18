@@ -5,7 +5,7 @@
 {-# LANGUAGE TypeOperators #-}
 
 -- module to organise the /auth section of the API
-module Authorization (AuthAPI, authServer, runTransaction) where
+module Authorization (AuthAPI, authServer) where
 
 import Database (DB)
 import Data.Text (Text)

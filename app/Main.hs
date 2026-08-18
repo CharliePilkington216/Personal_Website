@@ -4,13 +4,13 @@
 module Main where
 
 import Authorization (AuthAPI, authServer)
-import Config (loadConfig, jwtSecret, domain)
+import Config 
 import Database (createDB)
 import JWT (adminAuthHandler, refreshAuthHandler, verifyAccessToken, verifyRefreshToken)
 import Portfolio (PortfolioAPI, portfolioServer)
 import Tutoring (TutoringAPI, tutoringServer)
 import Servant
-import Network.Wai (Application)
+import Network.Wai.Handler.Warp (run)
 
 -- API type definition
 

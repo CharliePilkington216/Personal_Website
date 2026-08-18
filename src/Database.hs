@@ -1,4 +1,4 @@
-module Database (createDB, runTransaction, DB) where
+module Database (createDB, DB) where
 
 import Data.Pool (Pool, createPool)
 import Database.PostgreSQL.Simple
@@ -19,8 +19,3 @@ createDB connString =
         1       -- number of stripes
         60      -- unused connection timeout
         10      -- maximum connections per stripe
-
-runTransaction :: DB -> (Connection -> IO a) -> IO a
-runTransaction db action =
-    withResource db $ \conn ->
-        withTransaction conn action

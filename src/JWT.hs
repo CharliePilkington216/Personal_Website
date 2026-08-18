@@ -201,9 +201,7 @@ verifyRefreshToken = verifyToken RefreshType
 
 type AdminAuthResult = (Text, Text)
 
-adminAuthHandler
-  :: (Text -> IO (Either String AdminAuthResult))
-  -> AuthHandler Request AdminAuthResult
+adminAuthHandler :: (Text -> IO (Either String AdminAuthResult)) -> AuthHandler Request AdminAuthResult
 adminAuthHandler verifyAccessToken' = mkAuthHandler handler
   where
     handler :: Request -> Handler AdminAuthResult

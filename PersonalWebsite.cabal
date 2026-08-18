@@ -64,6 +64,7 @@ library
                       , Authorization
                       , Portfolio
                       , Tutoring
+                      , Database
 
     build-depends:      base ^>=4.20.2.0
                       , aeson
@@ -76,6 +77,8 @@ library
                       , lens
                       , memory
                       , mtl
+                      , postgresql-simple
+                      , resource-pool
                       , servant
                       , servant-server
                       , text
@@ -104,8 +107,7 @@ executable PersonalWebsite
                     , PersonalWebsite
                     , servant
                     , servant-server
-                    , postgresql-simple
-                    , resource-pool
+                    , warp
 
     -- Directories containing source files.
     hs-source-dirs:   app
@@ -124,11 +126,17 @@ test-suite PersonalWebsite-test
 
     other-modules:      CryptoSpec
                       , JWTSpec
+                      , ConfigSpec
 
     build-depends:      base ^>=4.20.2.0
                       , PersonalWebsite
                       , hspec
                       , text
+                      , bytestring
+                      , wai
+                      , servant
+                      , servant-server
+                      , mtl
 
     build-tool-depends: hspec-discover:hspec-discover
 
