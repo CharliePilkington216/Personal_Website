@@ -7,6 +7,7 @@
 -- module to organise the /auth section of the API
 module Authorization (AuthAPI, authServer) where
 
+import Database (DB)
 import Data.Text (Text)
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
@@ -52,16 +53,16 @@ type AuthAPI = "login"
 
 type instance AuthServerData (AuthProtect "refresh-auth") = (Text, Text, Text)
 
-authServer :: Server AuthAPI
-authServer = loginHandler :<|> refreshHandler :<|> logoutHandler
+authServer :: DB -> Server AuthAPI
+authServer db = loginHandler db :<|> refreshHandler db :<|> logoutHandler db
 
 -- endpoint definitions
 
-loginHandler :: LogInRequest -> Handler (Headers '[Header "Set-Cookie" SetCookie] LogInResponse)
+loginHandler :: DB -> LogInRequest -> Handler (Headers '[Header "Set-Cookie" SetCookie] LogInResponse)
 loginHandler = undefined
 
-refreshHandler :: (Text, Text, Text) -> Handler (Headers '[Header "Set-Cookie" SetCookie] RefreshResponse)
+refreshHandler :: DB -> (Text, Text, Text) -> Handler (Headers '[Header "Set-Cookie" SetCookie] RefreshResponse)
 refreshHandler = undefined
 
-logoutHandler :: (Text, Text, Text) -> Handler (Headers '[Header "Set-Cookie" SetCookie] NoContent)
+logoutHandler :: DB -> (Text, Text, Text) -> Handler (Headers '[Header "Set-Cookie" SetCookie] NoContent)
 logoutHandler = undefined

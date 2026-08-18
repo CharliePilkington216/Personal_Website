@@ -12,6 +12,7 @@
 -- module to organise the /portfolio section of the API
 module Portfolio (PortfolioAPI, portfolioServer) where
 
+import Database (DB)
 import Data.Aeson (ToJSON(..), FromJSON(..), genericToJSON, genericParseJSON, defaultOptions, camelTo2, Options (fieldLabelModifier))
 import Data.Text (Text)
 import Data.Time.Clock (UTCTime)
@@ -83,52 +84,52 @@ type PortfolioAdminTagsAPI = Get '[JSON] [TagWithID]
 
 -- portfolio server definition
 
-portfolioServer :: Server PortfolioAPI
+portfolioServer :: DB -> Server PortfolioAPI
 portfolioServer =
        publicProjectsHandler
   :<|> publicTagsHandler
   :<|> adminEndpointsHandler
 
--- endpoint definitions
-
-publicProjectsHandler :: Handler [Project]
-publicProjectsHandler = undefined
-
-publicTagsHandler :: Handler [Tag]
-publicTagsHandler = undefined
-
-adminEndpointsHandler :: (Text, Text) -> Server PortfolioAdminEndpointsAPI
-adminEndpointsHandler _ = adminProjectsEndpointsHandler
+adminEndpointsHandler :: DB -> (Text, Text) -> Server PortfolioAdminEndpointsAPI
+adminEndpointsHandler db _ = adminProjectsEndpointsHandler
                     :<|> adminTagsEndpointsHandler
 
-adminProjectsEndpointsHandler :: Server PortfolioAdminProjectsAPI
-adminProjectsEndpointsHandler = adminProjectsGetHandler
-                              :<|> adminProjectsPostHandler
-                              :<|> adminProjectsPutHandler
-                              :<|> adminProjectsDeleteHandler
+adminProjectsEndpointsHandler :: DB -> Server PortfolioAdminProjectsAPI
+adminProjectsEndpointsHandler db = adminProjectsGetHandler db
+                              :<|> adminProjectsPostHandler db
+                              :<|> adminProjectsPutHandler db
+                              :<|> adminProjectsDeleteHandler db
 
-adminTagsEndpointsHandler :: Server PortfolioAdminTagsAPI
-adminTagsEndpointsHandler = adminTagsGetHandler
-                            :<|> adminTagsPostHandler
-                            :<|> adminTagsDeleteHandler
+adminTagsEndpointsHandler :: DB -> Server PortfolioAdminTagsAPI
+adminTagsEndpointsHandler db = adminTagsGetHandler db
+                            :<|> adminTagsPostHandler db
+                            :<|> adminTagsDeleteHandler db
 
-adminProjectsGetHandler :: Handler [ProjectWithID]
-adminProjectsGetHandler = undefined
+-- endpoint definitions
 
-adminProjectsPostHandler :: Project -> Handler ProjectWithID
-adminProjectsPostHandler = undefined
+publicProjectsHandler :: DB -> Handler [Project]
+publicProjectsHandler db = undefined
 
-adminProjectsPutHandler :: Text -> Project -> Handler ProjectWithID
-adminProjectsPutHandler = undefined
+publicTagsHandler :: DB -> Handler [Tag]
+publicTagsHandler db = undefined
 
-adminProjectsDeleteHandler :: Text -> Handler NoContent
-adminProjectsDeleteHandler = undefined
+adminProjectsGetHandler :: DB -> Handler [ProjectWithID]
+adminProjectsGetHandler db = undefined
 
-adminTagsGetHandler :: Handler [TagWithID]
-adminTagsGetHandler = undefined
+adminProjectsPostHandler :: DB -> Project -> Handler ProjectWithID
+adminProjectsPostHandler db = undefined
 
-adminTagsPostHandler :: Tag -> Handler TagWithID
-adminTagsPostHandler = undefined
+adminProjectsPutHandler :: DB -> Text -> Project -> Handler ProjectWithID
+adminProjectsPutHandler db = undefined
 
-adminTagsDeleteHandler :: Text -> Handler NoContent
-adminTagsDeleteHandler = undefined
+adminProjectsDeleteHandler :: DB -> Text -> Handler NoContent
+adminProjectsDeleteHandler db = undefined
+
+adminTagsGetHandler :: DB -> Handler [TagWithID]
+adminTagsGetHandler db = undefined
+
+adminTagsPostHandler :: DB -> Tag -> Handler TagWithID
+adminTagsPostHandler db = undefined
+
+adminTagsDeleteHandler :: DB -> Text -> Handler NoContent
+adminTagsDeleteHandler db = undefined

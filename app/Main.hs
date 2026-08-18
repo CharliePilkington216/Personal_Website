@@ -5,7 +5,8 @@ module Main where
 
 import Authorization (AuthAPI, authServer)
 import Config (loadConfig, jwtSecret, domain)
-import JWT (adminAuthHandler, verifyAccessToken)
+import Database (createDB)
+import JWT (adminAuthHandler, refreshAuthHandler, verifyAccessToken, verifyRefreshToken)
 import Portfolio (PortfolioAPI, portfolioServer)
 import Tutoring (TutoringAPI, tutoringServer)
 import Servant
@@ -23,15 +24,14 @@ type API =
 api :: Proxy API
 api = Proxy
 
-server :: Server API
-server =
-       authServer
-  :<|> portfolioServer
-  :<|> tutoringServer
-
 main :: IO ()
 main = do
     config <- loadConfig
+
+    -- Database pools
+    authDB <- createDB (authDbConnString config)
+    portfolioDB <- createDB (portfolioDbConnString config)
+    tutoringDB <- createDB (inquiryDbConnString config)
 
     let verifyAccessToken' =
           verifyAccessToken
@@ -53,6 +53,11 @@ main = do
              adminAuthHandler'
           :. refreshAuthHandler'
           :. EmptyContext
+
+        server =
+             authServer authDB
+          :<|> portfolioServer portfolioDB
+          :<|> tutoringServer tutoringDB
 
     run 8080 $
       serveWithContext api context server

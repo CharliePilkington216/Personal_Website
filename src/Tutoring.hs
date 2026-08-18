@@ -11,6 +11,7 @@
 -- module to organise the /tutoring section of the API
 module Tutoring (TutoringAPI, tutoringServer) where
 
+import Database (DB)
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import Servant
@@ -44,10 +45,10 @@ type TutoringAPI = "inquiries" :> ReqBody '[JSON] TutoringRequest :> Post '[JSON
 
 -- tutoring server definition
 
-tutoringServer :: Server TutoringAPI
-tutoringServer = tutoringInquiriesHandler
+tutoringServer :: DB -> Server TutoringAPI
+tutoringServer db = tutoringInquiriesHandler db
 
 -- endpoint definitions
 
-tutoringInquiriesHandler :: TutoringRequest -> Handler NoContent
-tutoringInquiriesHandler = undefined
+tutoringInquiriesHandler :: DB -> TutoringRequest -> Handler NoContent
+tutoringInquiriesHandler db = undefined
