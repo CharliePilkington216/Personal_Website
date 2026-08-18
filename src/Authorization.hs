@@ -3,7 +3,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 
--- module to organise the /auth section of the api
+-- module to organise the /auth section of the API
 module Authorization where
 
 import Data.Text (Text)
