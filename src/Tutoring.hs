@@ -27,6 +27,9 @@ data TutoringRequest = TutoringRequest
   , description         :: Text
   } deriving (Show, Generic)
 
+instance FromJSON TutoringCategory where
+  parseJSON = genericParseJSON defaultOptions { fieldLabelModifier = camelTo2 '_' }
+
 -- API type definition
 
 type TutoringAPI = "inquiries" :> ReqBody '[JSON] TutoringRequest :> Post '[JSON] NoContent
