@@ -18,43 +18,43 @@ spec :: Spec
 spec = do
   describe "createAccessToken / verifyAccessToken" $ do
     it "round-trips: a created token verifies back to the same admin/session ids" $ do
-      Right token <- createAccessToken testAdminId testSessionId testSecret testDomain
-      verified <- verifyAccessToken token testSecret testDomain
+      Right token <- createAccessToken testSecret testDomain testAdminId testSessionId 
+      verified <- verifyAccessToken testSecret testDomain token
       verified `shouldBe` Right (testAdminId, testSessionId)
 
     it "produces a well-formed compact JWT (three dot-separated segments)" $ do
-      Right token <- createAccessToken testAdminId testSessionId testSecret testDomain
+      Right token <- createAccessToken testSecret testDomain testAdminId testSessionId
       length (T.splitOn "." token) `shouldBe` 3
 
     it "rejects verification against the wrong secret" $ do
-      Right token <- createAccessToken testAdminId testSessionId testSecret testDomain
-      verified <- verifyAccessToken token "a-completely-different-secret" testDomain
+      Right token <- createAccessToken testSecret testDomain testAdminId testSessionId
+      verified <- verifyAccessToken "a-completely-different-secret" testDomain token
       verified `shouldSatisfy` isLeft
 
     it "rejects verification against the wrong domain" $ do
-      Right token <- createAccessToken testAdminId testSessionId testSecret testDomain
-      verified <- verifyAccessToken token testSecret "not-my-domain.uk"
+      Right token <- createAccessToken testSecret testDomain testAdminId testSessionId
+      verified <- verifyAccessToken testSecret "not-my-domain.uk" token
       verified `shouldSatisfy` isLeft
 
     it "rejects a tampered token" $ do
-      Right token <- createAccessToken testAdminId testSessionId testSecret testDomain
+      Right token <- createAccessToken testSecret testDomain testAdminId testSessionId
       let tampered = T.dropEnd 1 token <> "x"
-      verified <- verifyAccessToken tampered testSecret testDomain
+      verified <- verifyAccessToken testSecret testDomain tampered
       verified `shouldSatisfy` isLeft
 
   describe "createRefreshToken / verifyRefreshToken" $
     it "round-trips the same way as access tokens" $ do
-      Right token <- createRefreshToken testAdminId testSessionId testSecret testDomain
-      verified <- verifyRefreshToken token testSecret testDomain
+      Right token <- createRefreshToken testSecret testDomain testAdminId testSessionId
+      verified <- verifyRefreshToken testSecret testDomain token
       verified `shouldBe` Right (testAdminId, testSessionId)
 
   describe "token type enforcement" $ do
     it "rejects an access token where a refresh token is expected" $ do
-      Right accessToken <- createAccessToken testAdminId testSessionId testSecret testDomain
-      verified <- verifyRefreshToken accessToken testSecret testDomain
+      Right accessToken <- createAccessToken testSecret testDomain testAdminId testSessionId
+      verified <- verifyRefreshToken testSecret testDomain accessToken
       verified `shouldSatisfy` isLeft
 
     it "rejects a refresh token where an access token is expected" $ do
-      Right refreshToken <- createRefreshToken testAdminId testSessionId testSecret testDomain
-      verified <- verifyAccessToken refreshToken testSecret testDomain
+      Right refreshToken <- createRefreshToken testSecret testDomain testAdminId testSessionId
+      verified <- verifyAccessToken testSecret testDomain refreshToken
       verified `shouldSatisfy` isLeft

@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 -- module to load in environment variables
-module Config (Config, authDbConnString, portfolioDbConnString, inquiryDbConnString, jwtSecret, loadConfig) where
+module Config (Config, authDbConnString, portfolioDbConnString, inquiryDbConnString, jwtSecret, domain, loadConfig) where
 
 import Configuration.Dotenv (loadFile, defaultConfig)
 import Data.Text (Text)
@@ -14,9 +14,11 @@ data Config = Config
   , portfolioDbConnString :: Text
   , inquiryDbConnString   :: Text
   , jwtSecret             :: Text
+  , domain                :: Text
   }
 
 -- will crash the program if this fails to run successfully
+-- loads in the values in the .env file
 loadConfig :: IO Config
 loadConfig = do
   _ <- loadFile defaultConfig
@@ -25,6 +27,7 @@ loadConfig = do
     <*> require "PORTFOLIODB_CONN_STRING"
     <*> require "INQUIRYDB_CONN_STRING"
     <*> require "JWT_SECRET"
+    <*> require "DOMAIN"
   where
     require :: String -> IO Text
     require key = do

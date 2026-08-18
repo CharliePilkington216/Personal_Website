@@ -1,15 +1,17 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 -- module to organise the /auth section of the API
-module Authorization (authServer) where
+module Authorization (AuthAPI, authServer) where
 
 import Data.Text (Text)
-import GHC.Generics (Generic)
 import Data.Aeson (FromJSON, ToJSON)
+import GHC.Generics (Generic)
 import Servant
+import Servant.Server.Experimental.Auth
 import Web.Cookie (SetCookie)
 
 -- Request JSON definitions
@@ -33,21 +35,22 @@ type LogInResponse = AccessToken
 
 type RefreshResponse = AccessToken
 
-
 -- API type definition
 
 type AuthAPI = "login" 
                 :> ReqBody '[JSON] LogInRequest 
                 :> Post '[JSON] (Headers '[Header "Set-Cookie" SetCookie] LogInResponse)
           :<|> "refresh" 
-                :> Header' '[Required, Strict] "Cookie" Text 
+                :> AuthProtect "refresh-auth"
                 :> Post '[JSON] (Headers '[Header "Set-Cookie" SetCookie] RefreshResponse)
           :<|> "logout" 
-                :> Header' '[Required, Strict] "Cookie" Text 
+                :> AuthProtect "refresh-auth"
                 :> Post '[JSON] (Headers '[Header "Set-Cookie" SetCookie] NoContent)
 
 
 -- auth server definition
+
+type instance AuthServerData (AuthProtect "refresh-auth") = (Text, Text, Text)
 
 authServer :: Server AuthAPI
 authServer = loginHandler :<|> refreshHandler :<|> logoutHandler
@@ -57,8 +60,8 @@ authServer = loginHandler :<|> refreshHandler :<|> logoutHandler
 loginHandler :: LogInRequest -> Handler (Headers '[Header "Set-Cookie" SetCookie] LogInResponse)
 loginHandler = undefined
 
-refreshHandler :: Text -> Handler (Headers '[Header "Set-Cookie" SetCookie] RefreshResponse)
+refreshHandler :: (Text, Text, Text) -> Handler (Headers '[Header "Set-Cookie" SetCookie] RefreshResponse)
 refreshHandler = undefined
 
-logoutHandler :: Text -> Handler (Headers '[Header "Set-Cookie" SetCookie] NoContent)
+logoutHandler :: (Text, Text, Text) -> Handler (Headers '[Header "Set-Cookie" SetCookie] NoContent)
 logoutHandler = undefined

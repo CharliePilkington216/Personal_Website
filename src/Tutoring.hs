@@ -9,11 +9,9 @@
 {-# LANGUAGE TypeOperators #-}
 
 -- module to organise the /tutoring section of the API
-module Tutoring where
+module Tutoring (TutoringAPI, tutoringServer) where
 
-import Data.Aeson (ToJSON(..), FromJSON(..), genericToJSON, genericParseJSON, defaultOptions, camelTo2, Options (fieldLabelModifier))
 import Data.Text (Text)
-import Data.Time.Clock (UTCTime)
 import GHC.Generics (Generic)
 import Servant
 import Data.Aeson.Types

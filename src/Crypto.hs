@@ -13,7 +13,7 @@ import Data.ByteArray.Encoding (Base (Base16), convertToBase)
 import Data.Text (Text)
 import qualified Data.Text.Encoding as TE
 
--- Functions to ensure password and token security
+-- Functions to ensure password and token security while at rest
 
 saltedHashPassword :: Text -> IO (Maybe Text)
 saltedHashPassword plaintext = do

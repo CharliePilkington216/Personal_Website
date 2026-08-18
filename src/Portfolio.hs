@@ -6,11 +6,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 -- module to organise the /portfolio section of the API
-module Portfolio where
+module Portfolio (PortfolioAPI, portfolioServer) where
 
 import Data.Aeson (ToJSON(..), FromJSON(..), genericToJSON, genericParseJSON, defaultOptions, camelTo2, Options (fieldLabelModifier))
 import Data.Text (Text)
@@ -18,11 +18,6 @@ import Data.Time.Clock (UTCTime)
 import GHC.Generics (Generic)
 import Servant
 import Servant.Server.Experimental.Auth
-import Network.Wai (Request, requestHeaders)
-import qualified Data.ByteString as BS
-import Data.Text.Encoding (decodeUtf8)
-import Control.Monad.IO.Class (liftIO)
-import JWT (verifyAccessToken)
 
 -- JSON definitions for the Portfolio API
 

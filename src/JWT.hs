@@ -1,14 +1,14 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-{-# LANGUAGE DataKinds #-}
 
 -- module to handle the creation and verification of JWTs for authentication
-module JWT (createAccessToken, createRefreshToken, verifyAccessToken, verifyRefreshToken, authContext) where
+module JWT (createAccessToken, createRefreshToken, verifyAccessToken, verifyRefreshToken, adminAuthHandler, refreshAuthHandler, AdminAuthResult, RefreshAuthResult) where
 
 import Control.Lens ((&), (.~), (^.), preview, review)
-import Control.Monad.Except (ExceptT, runExceptT, throwError)
+import Control.Monad.Except (ExceptT, runExceptT)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Trans.Class (lift)
 import Crypto.JOSE.JWK (JWK, fromOctets)
@@ -46,10 +46,10 @@ import qualified Data.Aeson.KeyMap as KeyMap
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString as BS
 import Data.Text (Text)
+import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Data.Time (NominalDiffTime, addUTCTime, getCurrentTime)
-import Control.Monad.Except (throwError)
-import Control.Monad.IO.Class (liftIO)
+import Data.Aeson.Types (Parser)
 import Network.Wai (Request, requestHeaders)
 import Servant
 import Servant.Server.Experimental.Auth
@@ -104,7 +104,7 @@ instance HasClaimsSet TokenClaims where
 
 instance FromJSON TokenClaims where
   parseJSON v = withObject "TokenClaims" (\o ->
-    TokenClaims <$> parseJSON v
+    TokenClaims <$> (parseJSON v :: Parser ClaimsSet)
                 <*> o .: "type"
                 <*> o .: "session") v
 
@@ -124,12 +124,12 @@ runJOSE msg action = do
 
 -- Build and sign a JWT with sub, iss, aud, iat, exp, type, and session.
 --
--- adminId   - the admin's UUID (as Text)
--- sessionId - the session's UUID (as Text)
 -- jwtSecret - the JWT secret from Config
 -- domain    - used as both iss and aud
+-- adminId   - the admin's UUID (as Text)
+-- sessionId - the session's UUID (as Text)
 createSignedToken :: TokenType -> Text -> Text -> Text -> Text -> IO (Either JWTError Text)
-createSignedToken tokenType adminId sessionId jwtSecret domain = runExceptT $ do
+createSignedToken tokenType jwtSecret domain adminId sessionId = runExceptT $ do
   now <- liftIO getCurrentTime
   let key         = mkSigningKey jwtSecret
       expiry      = addUTCTime (tokenLifetime tokenType) now
@@ -150,9 +150,9 @@ createSignedToken tokenType adminId sessionId jwtSecret domain = runExceptT $ do
 -- Verify a signed JWT.
 --
 -- tokenType - the expected token type ("access" or "refresh")
--- tokenText - the JWT
 -- jwtSecret - the JWT secret from Config
 -- domain    - used as both iss and aud
+-- tokenText - the JWT
 --
 -- Checks: signature validity, exp/iat (handled by verifyJWT),
 -- iss == domain, aud contains domain, and the typed "type" field
@@ -162,7 +162,7 @@ createSignedToken tokenType adminId sessionId jwtSecret domain = runExceptT $ do
 -- Returns (admin_id, session_id) from the sub claim and the typed
 -- session field.
 verifyToken :: TokenType -> Text -> Text -> Text -> IO (Either String (Text, Text))
-verifyToken tokenType tokenText jwtSecret domain = do
+verifyToken tokenType jwtSecret domain tokenText = do
   result <- runExceptT $ do
     let key = mkSigningKey jwtSecret
     expectedIssuer <- maybe (throwError "invalid domain configured") pure
@@ -199,33 +199,74 @@ verifyRefreshToken = verifyToken RefreshType
 
 -- necessary definitions to create an auth handler in the API
 
-type AuthResult = (Text, Text)
+type AdminAuthResult = (Text, Text)
 
-adminAuthHandler :: AuthHandler Request AuthResult
-adminAuthHandler = mkAuthHandler handler
+adminAuthHandler
+  :: (Text -> IO (Either String AdminAuthResult))
+  -> AuthHandler Request AdminAuthResult
+adminAuthHandler verifyAccessToken' = mkAuthHandler handler
   where
-    handler :: Request -> Handler (Text, Text)
+    handler :: Request -> Handler AdminAuthResult
     handler req =
       case lookup "Authorization" (requestHeaders req) of
-          Nothing ->
+        Nothing ->
+          throwError err401
+
+        Just header ->
+          case BS.stripPrefix "Bearer " header of
+            Nothing ->
               throwError err401
 
-          Just header ->
-              case BS.stripPrefix "Bearer " header of
-                  Nothing ->
-                      throwError err401
+            Just token -> do
+              result <- liftIO $
+                verifyAccessToken' (TE.decodeUtf8 token)
 
-                  Just token -> do
-                      result <- liftIO $
-                          verifyAccessToken (TE.decodeUtf8 token) "" ""
+              case result of
+                Left _ ->
+                  throwError err401
 
-                      case result of
-                          Left _ ->
-                              throwError err401
+                Right authResult ->
+                  pure authResult
 
-                          Right authResult ->
-                              pure authResult
+type RefreshAuthResult = (Text, Text, Text)
 
-authContext :: Context '[AuthHandler Request AuthResult]
-authContext =
-    adminAuthHandler :. EmptyContext
+refreshAuthHandler :: (Text -> IO (Either String (Text, Text)))-> AuthHandler Request RefreshAuthResult
+refreshAuthHandler verifyRefreshToken' = mkAuthHandler handler
+  where
+    handler :: Request -> Handler RefreshAuthResult
+    handler req =
+      case lookup "Cookie" (requestHeaders req) of
+        Nothing ->
+          throwError err401
+
+        Just cookieHeader ->
+          case extractRefreshToken (TE.decodeUtf8 cookieHeader) of
+            Nothing ->
+              throwError err401
+
+            Just refreshToken -> do
+              result <- liftIO $
+                verifyRefreshToken' refreshToken
+
+              case result of
+                Left _ ->
+                  throwError err401
+
+                Right (adminId, sessionId) ->
+                  pure (refreshToken, adminId, sessionId)
+
+extractCookie :: Text -> Text -> Maybe Text
+extractCookie cookieName cookieHeader =
+    lookup cookieName cookies
+  where
+    cookies =
+      map parseCookie $
+        T.splitOn ";" cookieHeader
+
+    parseCookie cookie =
+      let (name, value) = T.breakOn "=" (T.strip cookie)
+      in (name, T.drop 1 value)
+
+extractRefreshToken :: Text -> Maybe Text
+extractRefreshToken =
+    extractCookie "refresh_token"
