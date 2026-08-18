@@ -4,7 +4,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 -- module to organise the /auth section of the API
-module Authorization where
+module Authorization (authServer) where
 
 import Data.Text (Text)
 import GHC.Generics (Generic)
@@ -45,3 +45,20 @@ type AuthAPI = "login"
           :<|> "logout" 
                 :> Header' '[Required, Strict] "Cookie" Text 
                 :> Post '[JSON] (Headers '[Header "Set-Cookie" SetCookie] NoContent)
+
+
+-- auth server definition
+
+authServer :: Server AuthAPI
+authServer = loginHandler :<|> refreshHandler :<|> logoutHandler
+
+-- endpoint definitions
+
+loginHandler :: LogInRequest -> Handler (Headers '[Header "Set-Cookie" SetCookie] LogInResponse)
+loginHandler = undefined
+
+refreshHandler :: Text -> Handler (Headers '[Header "Set-Cookie" SetCookie] RefreshResponse)
+refreshHandler = undefined
+
+logoutHandler :: Text -> Handler (Headers '[Header "Set-Cookie" SetCookie] NoContent)
+logoutHandler = undefined

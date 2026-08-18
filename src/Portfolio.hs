@@ -7,6 +7,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE TypeFamilies #-}
 
 -- module to organise the /portfolio section of the API
 module Portfolio where
@@ -16,6 +17,12 @@ import Data.Text (Text)
 import Data.Time.Clock (UTCTime)
 import GHC.Generics (Generic)
 import Servant
+import Servant.Server.Experimental.Auth
+import Network.Wai (Request, requestHeaders)
+import qualified Data.ByteString as BS
+import Data.Text.Encoding (decodeUtf8)
+import Control.Monad.IO.Class (liftIO)
+import JWT (verifyAccessToken)
 
 -- JSON definitions for the Portfolio API
 
@@ -59,20 +66,74 @@ instance ToJSON TagWithID where
 
 -- API type definition
 
+type instance AuthServerData (AuthProtect "admin-auth") = (Text, Text)
+
 type PortfolioAPI = "projects" :> Get '[JSON] [Project]
             :<|> "tags" :> Get '[JSON] [Tag]
-            :<|> "admin" :> (
-              "projects" :> (
-                Get '[JSON] [ProjectWithID]
+            :<|> "admin" :> PortfolioAdminAPI
+
+type PortfolioAdminAPI = AuthProtect "admin-auth" :> PortfolioAdminEndpointsAPI
+
+type PortfolioAdminEndpointsAPI = "projects" :> PortfolioAdminProjectsAPI
+                    :<|> "tags" :> PortfolioAdminTagsAPI
+
+type PortfolioAdminProjectsAPI = Get '[JSON] [ProjectWithID]
                 :<|> ReqBody '[JSON] Project :> Post '[JSON] ProjectWithID
-                :<|> Capture "projectId" Text :> (
-                  ReqBody '[JSON] Project :> Put '[JSON] ProjectWithID
-                  :<|> DeleteNoContent
-                )
-              )
-              :<|> "tags" :> (
-                Get '[JSON] [TagWithID]
+                :<|> Capture "projectId" Text :> ReqBody '[JSON] Project :> Put '[JSON] ProjectWithID
+                :<|> Capture "projectId" Text :> DeleteNoContent
+
+type PortfolioAdminTagsAPI = Get '[JSON] [TagWithID]
                 :<|> ReqBody '[JSON] Tag :> Post '[JSON] TagWithID
                 :<|> Capture "tagId" Text :> DeleteNoContent
-              )
-            )
+
+-- portfolio server definition
+
+portfolioServer :: Server PortfolioAPI
+portfolioServer =
+       publicProjectsHandler
+  :<|> publicTagsHandler
+  :<|> adminEndpointsHandler
+
+-- endpoint definitions
+
+publicProjectsHandler :: Handler [Project]
+publicProjectsHandler = undefined
+
+publicTagsHandler :: Handler [Tag]
+publicTagsHandler = undefined
+
+adminEndpointsHandler :: (Text, Text) -> Server PortfolioAdminEndpointsAPI
+adminEndpointsHandler _ = adminProjectsEndpointsHandler
+                    :<|> adminTagsEndpointsHandler
+
+adminProjectsEndpointsHandler :: Server PortfolioAdminProjectsAPI
+adminProjectsEndpointsHandler = adminProjectsGetHandler
+                              :<|> adminProjectsPostHandler
+                              :<|> adminProjectsPutHandler
+                              :<|> adminProjectsDeleteHandler
+
+adminTagsEndpointsHandler :: Server PortfolioAdminTagsAPI
+adminTagsEndpointsHandler = adminTagsGetHandler
+                            :<|> adminTagsPostHandler
+                            :<|> adminTagsDeleteHandler
+
+adminProjectsGetHandler :: Handler [ProjectWithID]
+adminProjectsGetHandler = undefined
+
+adminProjectsPostHandler :: Project -> Handler ProjectWithID
+adminProjectsPostHandler = undefined
+
+adminProjectsPutHandler :: Text -> Project -> Handler ProjectWithID
+adminProjectsPutHandler = undefined
+
+adminProjectsDeleteHandler :: Text -> Handler NoContent
+adminProjectsDeleteHandler = undefined
+
+adminTagsGetHandler :: Handler [TagWithID]
+adminTagsGetHandler = undefined
+
+adminTagsPostHandler :: Tag -> Handler TagWithID
+adminTagsPostHandler = undefined
+
+adminTagsDeleteHandler :: Text -> Handler NoContent
+adminTagsDeleteHandler = undefined

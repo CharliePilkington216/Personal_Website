@@ -2,9 +2,10 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# LANGUAGE DataKinds #-}
 
 -- module to handle the creation and verification of JWTs for authentication
-module JWT (createAccessToken, createRefreshToken, verifyAccessToken, verifyRefreshToken) where
+module JWT (createAccessToken, createRefreshToken, verifyAccessToken, verifyRefreshToken, authContext) where
 
 import Control.Lens ((&), (.~), (^.), preview, review)
 import Control.Monad.Except (ExceptT, runExceptT, throwError)
@@ -43,9 +44,15 @@ import Data.Aeson
   )
 import qualified Data.Aeson.KeyMap as KeyMap
 import qualified Data.ByteString.Lazy as BSL
+import qualified Data.ByteString as BS
 import Data.Text (Text)
 import qualified Data.Text.Encoding as TE
 import Data.Time (NominalDiffTime, addUTCTime, getCurrentTime)
+import Control.Monad.Except (throwError)
+import Control.Monad.IO.Class (liftIO)
+import Network.Wai (Request, requestHeaders)
+import Servant
+import Servant.Server.Experimental.Auth
 
 -- Local orphan instance: this version of crypton doesn't provide a generic
 -- "lift MonadRandom through any transformer" instance, so ExceptT JWTError IO
@@ -189,3 +196,36 @@ verifyAccessToken = verifyToken AccessType
 
 verifyRefreshToken :: Text -> Text -> Text -> IO (Either String (Text, Text))
 verifyRefreshToken = verifyToken RefreshType
+
+-- necessary definitions to create an auth handler in the API
+
+type AuthResult = (Text, Text)
+
+adminAuthHandler :: AuthHandler Request AuthResult
+adminAuthHandler = mkAuthHandler handler
+  where
+    handler :: Request -> Handler (Text, Text)
+    handler req =
+      case lookup "Authorization" (requestHeaders req) of
+          Nothing ->
+              throwError err401
+
+          Just header ->
+              case BS.stripPrefix "Bearer " header of
+                  Nothing ->
+                      throwError err401
+
+                  Just token -> do
+                      result <- liftIO $
+                          verifyAccessToken (TE.decodeUtf8 token) "" ""
+
+                      case result of
+                          Left _ ->
+                              throwError err401
+
+                          Right authResult ->
+                              pure authResult
+
+authContext :: Context '[AuthHandler Request AuthResult]
+authContext =
+    adminAuthHandler :. EmptyContext

@@ -16,6 +16,7 @@ import Data.Text (Text)
 import Data.Time.Clock (UTCTime)
 import GHC.Generics (Generic)
 import Servant
+import Data.Aeson.Types
 
 -- JSON definitions for the Tutoring API
 
@@ -42,3 +43,13 @@ instance FromJSON TutoringRequest where
 -- API type definition
 
 type TutoringAPI = "inquiries" :> ReqBody '[JSON] TutoringRequest :> Post '[JSON] NoContent
+
+-- tutoring server definition
+
+tutoringServer :: Server TutoringAPI
+tutoringServer = tutoringInquiriesHandler
+
+-- endpoint definitions
+
+tutoringInquiriesHandler :: TutoringRequest -> Handler NoContent
+tutoringInquiriesHandler = undefined
