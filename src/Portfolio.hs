@@ -10,7 +10,7 @@
 
 module Portfolio where
 
-import Data.Aeson (ToJSON(..), FromJSON(..), genericToJSON, genericParseJSON, defaultOptions, camelTo2)
+import Data.Aeson (ToJSON(..), FromJSON(..), genericToJSON, genericParseJSON, defaultOptions, camelTo2, Options (fieldLabelModifier))
 import Data.Text (Text)
 import Data.Time.Clock (UTCTime)
 import GHC.Generics (Generic)
@@ -42,11 +42,7 @@ instance FromJSON Tag where
 
 data ProjectWithID = ProjectWithID
   { projectId   :: Text
-  , title       :: Text
-  , projectLink :: Text
-  , description :: Text
-  , tags        :: [Text]
-  , projectDate :: UTCTime
+  , project     :: Project
   } deriving (Show, Generic)
 
 instance ToJSON ProjectWithID where
@@ -54,7 +50,7 @@ instance ToJSON ProjectWithID where
 
 data TagWithID = TagWithID
   { tagId   :: Text
-  , name    :: Text
+  , tag     :: Tag
   } deriving (Show, Generic)
 
 instance ToJSON TagWithID where
@@ -70,12 +66,12 @@ type PortfolioAPI = "projects" :> Get '[JSON] [Project]
                 :<|> ReqBody '[JSON] Project :> Post '[JSON] ProjectWithID
                 :<|> Capture "projectId" Text :> (
                   ReqBody '[JSON] Project :> Put '[JSON] ProjectWithID
-                  :<|> DeleteNoContent '[JSON] NoContent
+                  :<|> DeleteNoContent
                 )
               )
-              "tags" :> (
+              :<|> "tags" :> (
                 Get '[JSON] [TagWithID]
                 :<|> ReqBody '[JSON] Tag :> Post '[JSON] TagWithID
-                :<|> Capture "tagId" Text :> DeleteNoContent '[JSON] NoContent
+                :<|> Capture "tagId" Text :> DeleteNoContent
               )
             )
