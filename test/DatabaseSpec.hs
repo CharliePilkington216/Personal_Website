@@ -11,6 +11,7 @@ import Database.PostgreSQL.Simple
     , query_
     , begin
     , rollback
+    , query
     )
 import Database.PostgreSQL.Simple.Types (Only(..))
 import Data.Text (Text)
@@ -51,7 +52,6 @@ authDbSpec config =
     beforeAll (setupConn (authDbConnString config) [seedAdmins, seedSessions]) $
         afterAll teardownConn $
             describe "authdb" $ do
-
                 it "connects and sees the seeded admin" $ \conn -> do
                     [Only n] <- query_ conn "SELECT count(*) FROM admins" :: IO [Only Int]
                     n `shouldBe` 1

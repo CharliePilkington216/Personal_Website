@@ -5,7 +5,17 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 -- module to handle the creation and verification of JWTs for authentication
-module JWT (createAccessToken, createRefreshToken, verifyAccessToken, verifyRefreshToken, adminAuthHandler, refreshAuthHandler, AdminAuthResult, RefreshAuthResult) where
+module JWT (createAccessToken, 
+createRefreshToken, 
+verifyAccessToken, 
+verifyRefreshToken, 
+adminAuthHandler, 
+refreshAuthHandler, 
+AdminAuthResult, 
+RefreshAuthResult,
+accessTokenLifeTime,
+refreshTokenLifeTime
+) where
 
 import Control.Lens ((&), (.~), (^.), preview, review)
 import Control.Monad.Except (ExceptT, runExceptT)
