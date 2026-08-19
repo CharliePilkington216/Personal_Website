@@ -127,6 +127,7 @@ test-suite PersonalWebsite-test
     other-modules:      CryptoSpec
                       , JWTSpec
                       , ConfigSpec
+                      , DatabaseSpec
 
     build-depends:      base ^>=4.20.2.0
                       , PersonalWebsite
@@ -137,6 +138,8 @@ test-suite PersonalWebsite-test
                       , servant
                       , servant-server
                       , mtl
+                      , resource-pool
+                      , postgresql-simple
 
     build-tool-depends: hspec-discover:hspec-discover
 

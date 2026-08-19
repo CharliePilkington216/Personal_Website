@@ -10,8 +10,8 @@ spec = do
   describe "loadConfig" $ do
     it "loads the configuration from the environment variables" $ do
       config <- loadConfig
-      authDbConnString config `shouldBe` "postgres://user:password@localhost:5432/authdb"
-      portfolioDbConnString config `shouldBe` "postgres://user:password@localhost:5432/portfoliodb"
-      inquiryDbConnString config `shouldBe` "postgres://user:password@localhost:5432/inquirydb"
+      authDbConnString config `shouldBe` "postgresql://testauth_admin:password@localhost:5432/testauthdb"
+      portfolioDbConnString config `shouldBe` "postgres://testportfolio_admin:password@localhost:5432/testportfoliodb"
+      inquiryDbConnString config `shouldBe` "postgres://testinquiry_admin:password@localhost:5432/testinquirydb"
       jwtSecret config `shouldBe` "test-secret"
       domain config `shouldBe` "localhost"
