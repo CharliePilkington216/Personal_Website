@@ -14,7 +14,7 @@ import Authorization
 import Config (Config, loadConfig, authDbConnString)
 import Crypto (hashToken)
 import Crypto.JWT (JWTError (JWTExpired))
-import Data.Pool (Pool, createPool, destroyAllResources, withResource)
+import Data.Pool (createPool, destroyAllResources, withResource)
 import Data.Text (Text)
 import qualified Data.Text.Encoding as TE
 import Database (DB)
