@@ -211,6 +211,9 @@ verifyRefreshToken = verifyToken RefreshType
 
 type AdminAuthResult = (Text, Text)
 
+-- runs before the client reaches any admin endpoints
+-- takes the Authorization: Bearer {token} header and verifies the token
+-- returns (admin_id, session_id) when successful
 adminAuthHandler :: (Text -> IO (Either String AdminAuthResult)) -> AuthHandler Request AdminAuthResult
 adminAuthHandler verifyAccessToken' = mkAuthHandler handler
   where
@@ -238,6 +241,9 @@ adminAuthHandler verifyAccessToken' = mkAuthHandler handler
 
 type RefreshAuthResult = (Text, Text, Text)
 
+-- runs before reaching the /auth/refresh or /auth/logout endpoints
+-- takes the refresh token from cookies and verifies it
+-- returns (refresh_token, admin_id, session_id) if successful
 refreshAuthHandler :: (Text -> IO (Either String (Text, Text)))-> AuthHandler Request RefreshAuthResult
 refreshAuthHandler verifyRefreshToken' = mkAuthHandler handler
   where

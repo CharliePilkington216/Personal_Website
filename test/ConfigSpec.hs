@@ -13,5 +13,5 @@ spec = do
       authDbConnString config `shouldBe` "postgresql://testauth_admin:password@localhost:5432/testauthdb"
       portfolioDbConnString config `shouldBe` "postgres://testportfolio_admin:password@localhost:5432/testportfoliodb"
       inquiryDbConnString config `shouldBe` "postgres://testinquiry_admin:password@localhost:5432/testinquirydb"
-      jwtSecret config `shouldBe` "test-secret"
+      jwtSecret config `shouldBe` "test-secret-do-not-use-in-production"
       domain config `shouldBe` "localhost"

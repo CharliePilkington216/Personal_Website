@@ -131,6 +131,7 @@ test-suite PersonalWebsite-test
                       , JWTSpec
                       , ConfigSpec
                       , DatabaseSpec
+                      , AuthorizationSpec
 
     build-depends:      base ^>=4.20.2.0
                       , PersonalWebsite
@@ -143,6 +144,8 @@ test-suite PersonalWebsite-test
                       , mtl
                       , resource-pool
                       , postgresql-simple
+                      , jose
+                      , cookie
 
     build-tool-depends: hspec-discover:hspec-discover
 
