@@ -3,6 +3,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 -- module to organise the /auth section of the API
 module Authorization (AuthAPI, TokenMinter, LogInRequest (..), AccessToken (..), authServer, loginHandler, refreshHandler, logoutHandler) where

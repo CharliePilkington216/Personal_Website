@@ -132,6 +132,7 @@ test-suite PersonalWebsite-test
                       , ConfigSpec
                       , DatabaseSpec
                       , AuthorizationSpec
+                      , PortfolioSpec
 
     build-depends:      base ^>=4.20.2.0
                       , PersonalWebsite
@@ -146,6 +147,7 @@ test-suite PersonalWebsite-test
                       , postgresql-simple
                       , jose
                       , cookie
+                      , time
 
     build-tool-depends: hspec-discover:hspec-discover
 

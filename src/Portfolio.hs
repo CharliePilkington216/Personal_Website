@@ -10,7 +10,23 @@
 {-# LANGUAGE TypeOperators #-}
 
 -- module to organise the /portfolio section of the API
-module Portfolio (PortfolioAPI, portfolioServer) where
+module Portfolio
+    ( PortfolioAPI
+    , portfolioServer
+    , Project (..)
+    , Tag (..)
+    , ProjectWithID (..)
+    , TagWithID (..)
+    , publicProjectsHandler
+    , publicTagsHandler
+    , adminProjectsGetHandler
+    , adminProjectsPostHandler
+    , adminProjectsPutHandler
+    , adminProjectsDeleteHandler
+    , adminTagsGetHandler
+    , adminTagsPostHandler
+    , adminTagsDeleteHandler
+    ) where
 
 import Database (DB)
 import Data.Aeson (ToJSON(..), FromJSON(..), genericToJSON, genericParseJSON, defaultOptions, camelTo2, Options (fieldLabelModifier))
@@ -34,7 +50,7 @@ data Project = Project
   , description :: Text
   , tags        :: [Text]
   , projectDate :: UTCTime
-  } deriving (Show, Generic)
+  } deriving (Show, Eq, Generic)
 
 instance ToJSON Project where
   toJSON = genericToJSON defaultOptions { fieldLabelModifier = camelTo2 '_' }
@@ -43,7 +59,7 @@ instance FromJSON Project where
 
 data Tag = Tag
   { name    :: Text
-  } deriving (Show, Generic)
+  } deriving (Show, Eq, Generic)
 
 instance ToJSON Tag where
   toJSON = genericToJSON defaultOptions { fieldLabelModifier = camelTo2 '_' }
@@ -53,7 +69,7 @@ instance FromJSON Tag where
 data ProjectWithID = ProjectWithID
   { projectId   :: Text
   , project     :: Project
-  } deriving (Show, Generic)
+  } deriving (Show, Eq, Generic)
 
 instance ToJSON ProjectWithID where
   toJSON = genericToJSON defaultOptions { fieldLabelModifier = camelTo2 '_' }
@@ -61,7 +77,7 @@ instance ToJSON ProjectWithID where
 data TagWithID = TagWithID
   { tagId   :: Text
   , tag     :: Tag
-  } deriving (Show, Generic)
+  } deriving (Show, Eq, Generic)
 
 instance ToJSON TagWithID where
   toJSON = genericToJSON defaultOptions { fieldLabelModifier = camelTo2 '_' }
