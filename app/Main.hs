@@ -9,8 +9,12 @@ import Database (createDB)
 import JWT (adminAuthHandler, refreshAuthHandler, verifyAccessToken, verifyRefreshToken, createAccessToken, createRefreshToken)
 import Portfolio (PortfolioAPI, portfolioServer)
 import Tutoring (TutoringAPI, tutoringServer)
+import Network.HTTP.Client (newManager)
+import Network.HTTP.Client.OpenSSL (opensslManagerSettings, withOpenSSL)
+import qualified OpenSSL.Session as SSL
 import Servant
 import Network.Wai.Handler.Warp (run)
+import qualified Email
 
 -- API type definition
 
@@ -25,13 +29,15 @@ api :: Proxy API
 api = Proxy
 
 main :: IO ()
-main = do
+main = withOpenSSL $ do
     config <- loadConfig
 
     -- Database pools
     authDB <- createDB (authDbConnString config)
     portfolioDB <- createDB (portfolioDbConnString config)
     tutoringDB <- createDB (inquiryDbConnString config)
+
+    httpManager <- newManager (opensslManagerSettings SSL.context)
 
     let createAccessToken' = createAccessToken (jwtSecret config) (domain config)
         createRefreshToken' = createRefreshToken (jwtSecret config) (domain config)
@@ -47,10 +53,17 @@ main = do
           :. refreshAuthHandler'
           :. EmptyContext
 
+        emailSettings =
+          Email.EmailSettings
+            { Email.settingsManager     = httpManager
+            , Email.settingsApiKey      = resendApiKey config
+            , Email.settingsFromAddress = fromEmail config
+            }
+
         server =
              authServer authDB createAccessToken' createRefreshToken'
           :<|> portfolioServer portfolioDB
-          :<|> tutoringServer tutoringDB
+          :<|> tutoringServer tutoringDB emailSettings (notifyEmail config)
 
     run 8080 $
       serveWithContext api context server

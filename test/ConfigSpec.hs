@@ -15,3 +15,6 @@ spec = do
       inquiryDbConnString config `shouldBe` "postgres://testinquiry_admin:password@localhost:5432/testinquirydb"
       jwtSecret config `shouldBe` "test-secret-do-not-use-in-production"
       domain config `shouldBe` "localhost"
+      resendApiKey config `shouldBe` "super-secret-api-key"
+      fromEmail config `shouldBe` "sender@example.com"
+      notifyEmail config `shouldBe` "receiver@example.com"

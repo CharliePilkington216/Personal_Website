@@ -16,6 +16,9 @@ import Data.Text (Text)
 import GHC.Generics (Generic)
 import Servant
 import Data.Aeson.Types
+import Email
+import InquiryEmail
+import Control.Monad.IO.Class
 
 -- JSON definitions for the Tutoring API
 
@@ -45,10 +48,29 @@ type TutoringAPI = "inquiries" :> ReqBody '[JSON] TutoringRequest :> Post '[JSON
 
 -- tutoring server definition
 
-tutoringServer :: DB -> Server TutoringAPI
+tutoringServer :: DB -> EmailSettings -> Text -> Server TutoringAPI
 tutoringServer db = tutoringInquiriesHandler db
 
 -- endpoint definitions
 
-tutoringInquiriesHandler :: DB -> TutoringRequest -> Handler NoContent
-tutoringInquiriesHandler db = undefined
+tutoringInquiriesHandler :: DB -> EmailSettings -> Text -> TutoringRequest -> Handler NoContent
+tutoringInquiriesHandler db settings notifyTo req = do
+  let details =
+        InquiryDetails
+          { detailsName     = name req
+          , detailsEmail    = email req
+          , detailsCategory = categoryLabel (tutoringCategory req)
+          , detailsInfo     = description req
+          }
+ 
+  liftIO (recordAndNotifyInquiry db settings notifyTo details)
+ 
+  pure NoContent
+
+-- helper functions 
+
+categoryLabel :: TutoringCategory -> Text
+categoryLabel Gcse     = "GCSE"
+categoryLabel ALevel   = "ALevel"
+categoryLabel Oxbridge = "Oxbridge"
+categoryLabel Other    = "other"
