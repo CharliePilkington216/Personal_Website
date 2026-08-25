@@ -28,6 +28,7 @@ import Web.Cookie
     )
 import JWT
 import GHC.Int (Int64)
+import Logger
 
 -- Request JSON definitions
 
@@ -70,10 +71,10 @@ type TokenMinter = Text -> Text -> IO (Either JWTError Text)
 
 type instance AuthServerData (AuthProtect "refresh-auth") = (Text, Text, Text)
 
-authServer :: DB -> TokenMinter -> TokenMinter -> Server AuthAPI
-authServer db mkAccessToken mkRefreshToken = loginHandler db mkAccessToken mkRefreshToken 
-                                        :<|> refreshHandler db mkAccessToken mkRefreshToken 
-                                        :<|> logoutHandler db
+authServer :: Logger -> DB -> TokenMinter -> TokenMinter -> Server AuthAPI
+authServer logger db mkAccessToken mkRefreshToken = loginHandler logger db mkAccessToken mkRefreshToken 
+                                        :<|> refreshHandler logger db mkAccessToken mkRefreshToken 
+                                        :<|> logoutHandler logger db
 
 -- endpoint definitions
 
@@ -83,21 +84,31 @@ authServer db mkAccessToken mkRefreshToken = loginHandler db mkAccessToken mkRef
 -- if correct create a new session linked to the admin and return the session_id
 -- use the admin_id and session_id to return a 200 OK with access token in JSON and refresh token in Cookies
 -- throw 401 for incorrect credentials or 500 for any server error
-loginHandler :: DB -> TokenMinter -> TokenMinter -> LogInRequest -> Servant.Handler (Headers '[Header "Set-Cookie" SetCookie] LogInResponse)
-loginHandler db mkAccessToken mkRefreshToken req = do
+loginHandler :: Logger -> DB -> TokenMinter -> TokenMinter -> LogInRequest -> Servant.Handler (Headers '[Header "Set-Cookie" SetCookie] LogInResponse)
+loginHandler logger db mkAccessToken mkRefreshToken req = do
     lookupResult <- liftIO (try (withResource db lookupAdmin) :: IO (Either SomeException [(Text, Text)]))
     (adminId, storedHash) <- case lookupResult of
-        Left _          -> throwError err500
-        Right []        -> throwError err401
+        Left _          -> do
+            liftIO $ logMessage logger "Internal database error on /auth/login call, email and password lookup"
+            throwError err500
+        Right []        -> do
+            liftIO $ logMessage logger "Unauthorised access on /auth/login, incorrect email"
+            throwError err401
         Right (row : _) -> pure row
 
     if not (checkPassword storedHash (password req))
-        then throwError err401
+        then do
+            liftIO $ logMessage logger "Unauthorised access on /auth/login, incorrect password"
+            throwError err401
         else do
             sessionResult <- liftIO (try (withResource db (insertSession adminId)) :: IO (Either SomeException [Only Text]))
             sessionId <- case sessionResult of
-                Left _             -> throwError err500
-                Right []           -> throwError err500
+                Left _             -> do
+                    liftIO $ logMessage logger "Internal database error on /auth/login call, session creation"
+                    throwError err500
+                Right []           -> do
+                    liftIO $ logMessage logger "Unexpected error on /auth/login, session creation"
+                    throwError err500
                 Right (Only s : _) -> pure s
 
             accessResult  <- liftIO (mkAccessToken adminId sessionId)
@@ -108,9 +119,13 @@ loginHandler db mkAccessToken mkRefreshToken req = do
                     insertResult <- liftIO (try (withResource db (insertToken sessionId refreshToken))
                                                 :: IO (Either SomeException Int64))
                     case insertResult of
-                        Left _  -> throwError err500
+                        Left _  -> do
+                            liftIO $ logMessage logger "Internal database error on /auth/login call, token creation"
+                            throwError err500
                         Right _ -> pure (addHeader (refreshCookie refreshToken) (AccessToken accessToken))
-                _ -> throwError err500
+                _ -> do
+                    liftIO $ logMessage logger "Unexpected error on /auth/login, token creation"
+                    throwError err500
   where
     lookupAdmin :: Connection -> IO [(Text, Text)]
     lookupAdmin conn =
@@ -128,13 +143,17 @@ loginHandler db mkAccessToken mkRefreshToken req = do
 -- checks whether the session is with that admin, not revoked and not expired
 -- checks the refresh token is not expired and belongs to that session, if not it revokes that session
 -- if successful it revokes the refresh token and generates a new refresh token and access token to give to the user
-refreshHandler :: DB -> TokenMinter -> TokenMinter -> (Text, Text, Text) -> Handler (Headers '[Header "Set-Cookie" SetCookie] RefreshResponse)
-refreshHandler db mkAccessToken mkRefreshToken (refreshToken, adminId, sessionId) = do
+refreshHandler :: Logger -> DB -> TokenMinter -> TokenMinter -> (Text, Text, Text) -> Handler (Headers '[Header "Set-Cookie" SetCookie] RefreshResponse)
+refreshHandler logger db mkAccessToken mkRefreshToken (refreshToken, adminId, sessionId) = do
     validation <- liftIO (try (withResource db (validateAndRotateToken adminId sessionId refreshToken))
                                 :: IO (Either SomeException Bool))
     case validation of
-        Left _      -> throwError err500
-        Right False -> throwError err401
+        Left _      -> do
+            liftIO $ logMessage logger "Internal database error on /auth/refresh call, token verification and rotation"
+            throwError err500
+        Right False -> do
+            liftIO $ logMessage logger "Unauthorised access on /auth/refresh, invalid token"
+            throwError err401
         Right True  -> pure ()
 
     accessResult  <- liftIO (mkAccessToken adminId sessionId)
@@ -145,9 +164,12 @@ refreshHandler db mkAccessToken mkRefreshToken (refreshToken, adminId, sessionId
             insertResult <- liftIO (try (withResource db (insertToken sessionId newRefreshToken))
                                         :: IO (Either SomeException Int64))
             case insertResult of
-                Left _  -> throwError err500
+                Left _  -> do
+                    liftIO $ logMessage logger "Internal database error on /auth/refresh call, token creation"
+                    throwError err500
                 Right _ -> pure (addHeader (refreshCookie newRefreshToken) (AccessToken newAccessToken))
-        _ ->
+        _ -> do
+            liftIO $ logMessage logger "Unexpected error on /auth/refresh, token creation"
             throwError err500
   where
     -- Checks the session belongs to this admin and is still live, then checks the presented refresh token against its stored hash for that session:
@@ -189,12 +211,14 @@ refreshHandler db mkAccessToken mkRefreshToken (refreshToken, adminId, sessionId
 -- takes the refresh_token, admin_id, session_id from the verified refresh token in cookies
 -- revokes the session which matches the given session_id and admin_id
 -- sends back an empty cookies and no content to the user
-logoutHandler :: DB -> (Text, Text, Text) -> Servant.Handler (Headers '[Header "Set-Cookie" SetCookie] NoContent)
-logoutHandler db (_refreshToken, adminId, sessionId) = do
+logoutHandler :: Logger -> DB -> (Text, Text, Text) -> Servant.Handler (Headers '[Header "Set-Cookie" SetCookie] NoContent)
+logoutHandler logger db (_refreshToken, adminId, sessionId) = do
     result <- liftIO (try (withResource db (revokeSession adminId sessionId))
                           :: IO (Either SomeException Int64))
     case result of
-        Left _  -> throwError err500
+        Left _  -> do
+            liftIO $ logMessage logger "Internal database error on /auth/logout call, session deletion"
+            throwError err500
         Right _ -> pure (addHeader clearRefreshCookie NoContent)
   where
     revokeSession :: Text -> Text -> Connection -> IO Int64

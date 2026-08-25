@@ -11,6 +11,7 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import JWT 
 import Test.Hspec
+import Logger (newLogger, closeLogger)
 
 adminRequest :: Text -> Request
 adminRequest token =
@@ -38,6 +39,8 @@ expiredRefreshToken = "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJleGFtcGxlLmNvbSIsImV4cCI6
 
 spec :: Spec
 spec = do
+  logger <- runIO $ newLogger "logs/test.log"
+
   describe "createAccessToken / verifyAccessToken" $ do
     it "round-trips: a created token verifies back to the same admin/session ids" $ do
       Right token <- createAccessToken testSecret testDomain testAdminId testSessionId 
@@ -99,7 +102,7 @@ spec = do
           testSessionId
 
       let authHandler =
-            adminAuthHandler
+            adminAuthHandler logger
               (verifyAccessToken testSecret testDomain)
 
       result <-
@@ -112,7 +115,7 @@ spec = do
 
     it "returns an error when given an invalid access token" $ do
       let authHandler =
-            adminAuthHandler
+            adminAuthHandler logger
               (verifyAccessToken testSecret testDomain)
 
       result <-
@@ -124,7 +127,7 @@ spec = do
 
     it "rejects a request without an Authorization header" $ do
       let authHandler =
-            adminAuthHandler
+            adminAuthHandler logger
               (verifyAccessToken testSecret testDomain)
 
       result <-
@@ -145,7 +148,7 @@ spec = do
           testSessionId
 
       let authHandler =
-            refreshAuthHandler
+            refreshAuthHandler logger
               (verifyRefreshToken testSecret testDomain)
 
       result <-
@@ -162,7 +165,7 @@ spec = do
 
     it "returns an error when given an invalid refresh token" $ do
       let authHandler =
-            refreshAuthHandler
+            refreshAuthHandler logger
               (verifyRefreshToken testSecret testDomain)
 
       result <-
@@ -174,7 +177,7 @@ spec = do
 
     it "rejects a request without a refresh_token cookie" $ do
       let authHandler =
-            refreshAuthHandler
+            refreshAuthHandler logger
               (verifyRefreshToken testSecret testDomain)
 
       let request =
@@ -189,3 +192,5 @@ spec = do
           unAuthHandler authHandler request
 
       result `shouldSatisfy` isLeft
+
+  runIO $ closeLogger logger

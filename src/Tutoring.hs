@@ -19,6 +19,7 @@ import Data.Aeson.Types
 import Email
 import InquiryEmail
 import Control.Monad.IO.Class
+import Logger
 
 -- JSON definitions for the Tutoring API
 
@@ -48,13 +49,13 @@ type TutoringAPI = "inquiries" :> ReqBody '[JSON] TutoringRequest :> Post '[JSON
 
 -- tutoring server definition
 
-tutoringServer :: DB -> EmailSettings -> Text -> Server TutoringAPI
-tutoringServer db = tutoringInquiriesHandler db
+tutoringServer :: Logger -> DB -> EmailSettings -> Text -> Server TutoringAPI
+tutoringServer logger db = tutoringInquiriesHandler logger db
 
 -- endpoint definitions
 
-tutoringInquiriesHandler :: DB -> EmailSettings -> Text -> TutoringRequest -> Handler NoContent
-tutoringInquiriesHandler db settings notifyTo req = do
+tutoringInquiriesHandler :: Logger -> DB -> EmailSettings -> Text -> TutoringRequest -> Handler NoContent
+tutoringInquiriesHandler logger db settings notifyTo req = do
   let details =
         InquiryDetails
           { detailsName     = name req
@@ -63,7 +64,7 @@ tutoringInquiriesHandler db settings notifyTo req = do
           , detailsInfo     = description req
           }
  
-  liftIO (recordAndNotifyInquiry db settings notifyTo details)
+  liftIO (recordAndNotifyInquiry logger db settings notifyTo details)
  
   pure NoContent
 

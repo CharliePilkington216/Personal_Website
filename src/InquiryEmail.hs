@@ -41,6 +41,7 @@ import qualified Data.Text as T
 import Database.PostgreSQL.Simple
 
 import Email (EmailContent (..), EmailError (..), EmailSettings, sendEmail)
+import Logger
 
 -- | The fields needed to record and notify about an inquiry. 'detailsCategory'
 -- must already be the exact Postgres @tutoring_type@ enum label ("GCSE",
@@ -71,8 +72,8 @@ recordDeniedInquiry pool details =
 -- | Record an inquiry as 'pending', then fork a background process that
 -- tries to email the site owner about it. Returns as soon as the row is
 -- inserted.
-recordAndNotifyInquiry :: Pool Connection -> EmailSettings -> Text -> InquiryDetails -> IO ()
-recordAndNotifyInquiry pool settings notifyTo details = do
+recordAndNotifyInquiry :: Logger -> Pool Connection -> EmailSettings -> Text -> InquiryDetails -> IO ()
+recordAndNotifyInquiry logger pool settings notifyTo details = do
   inquiryId <- withResource pool $ \conn -> do
     [Only iid] <-
       query
@@ -82,7 +83,7 @@ recordAndNotifyInquiry pool settings notifyTo details = do
         \RETURNING inquiry_id::text"
         (detailsName details, detailsEmail details, detailsCategory details, detailsInfo details)
     pure iid
-  _ <- forkIO (notifyLoop pool settings notifyTo inquiryId details 0)
+  _ <- forkIO (notifyLoop logger pool settings notifyTo inquiryId details 0)
   pure ()
 
 -- | 2^15 seconds — the backoff value at which we stop retrying and give
@@ -94,29 +95,36 @@ maxBackoffSeconds = 2 ^ (15 :: Int)
 -- (0 on the very first try, not yet attempted when this is called). On
 -- failure it waits @2 ^ attempt@ seconds — 1s, 2s, 4s, ... — before
 -- retrying, giving up once that delay would reach 'maxBackoffSeconds'.
-notifyLoop :: Pool Connection -> EmailSettings -> Text -> Text -> InquiryDetails -> Int -> IO ()
-notifyLoop pool settings notifyTo inquiryId details attempt = do
+notifyLoop :: Logger -> Pool Connection -> EmailSettings -> Text -> Text -> InquiryDetails -> Int -> IO ()
+notifyLoop logger pool settings notifyTo inquiryId details attempt = do
   result <- sendEmail settings (notificationContent notifyTo details)
   case result of
-    Right () -> markStatus pool inquiryId "sent"
+    Right () -> do
+      logMessage logger "Email sent due to request on /tutoring/inquiries"
+      markStatus pool inquiryId "sent"
     Left (ResendSendFailed _) -> do
       let delaySeconds = (2 :: Int) ^ attempt
       if delaySeconds >= maxBackoffSeconds
-        then giveUp pool settings inquiryId details
+        then do
+          logMessage logger "Email failed to send due to request on /tutoring/inquiries, failed"
+          giveUp logger pool settings inquiryId details
         else do
+          logMessage logger "Email failed to send due to request on /tutoring/inquiries, retrying"
           threadDelay (delaySeconds * 1000000)
-          notifyLoop pool settings notifyTo inquiryId details (attempt + 1)
+          notifyLoop logger pool settings notifyTo inquiryId details (attempt + 1)
 
 -- | Backoff exhausted: mark the row 'failed' and try to apologise to the
 -- inquirer directly. If the apology also fails, do nothing further —
 -- left for a future logging pass rather than retried again.
-giveUp :: Pool Connection -> EmailSettings -> Text -> InquiryDetails -> IO ()
-giveUp pool settings inquiryId details = do
+giveUp :: Logger -> Pool Connection -> EmailSettings -> Text -> InquiryDetails -> IO ()
+giveUp logger pool settings inquiryId details = do
   markStatus pool inquiryId "failed"
   apologyResult <- sendEmail settings (apologyContent details)
   case apologyResult of
     Right () -> pure ()
-    Left _   -> pure ()
+    Left _   -> do
+      logMessage logger "Apology email failed to send due to failed request on /tutoring/inquiries"      
+      pure ()
 
 markStatus :: Pool Connection -> Text -> Text -> IO ()
 markStatus pool inquiryId status =

@@ -40,6 +40,7 @@ import Database.PostgreSQL.Simple
 import Servant (NoContent (..), ServerError (..))
 import Servant.Server (runHandler)
 import Control.Exception (finally)
+import Logger
 
 -- creates a test db conn but needs a pool, the pool only has 1 connection so we can rollback, don't change this
 setupDb :: Text -> [Connection -> IO ()] -> IO DB
@@ -94,28 +95,30 @@ mkProject tags' = Project
 spec :: Spec
 spec = do
     config <- runIO loadConfig
-    publicProjectsHandlerSpec config
-    publicTagsHandlerSpec config
-    adminProjectsGetHandlerSpec config
-    --adminProjectsPostHandlerSpec config
-    --adminProjectsPutHandlerSpec config
-    adminProjectsDeleteHandlerSpec config
-    adminTagsGetHandlerSpec config
-    --adminTagsPostHandlerSpec config
-    adminTagsDeleteHandlerSpec config
+    logger <- runIO $ newLogger "logs/test.log"
+    publicProjectsHandlerSpec logger config
+    publicTagsHandlerSpec logger config
+    adminProjectsGetHandlerSpec logger config
+    --adminProjectsPostHandlerSpec logger config
+    --adminProjectsPutHandlerSpec logger config
+    adminProjectsDeleteHandlerSpec logger config
+    adminTagsGetHandlerSpec logger config
+    --adminTagsPostHandlerSpec logger config
+    adminTagsDeleteHandlerSpec logger config
+    runIO $ closeLogger logger
 
 -- =======================================================================
 -- publicProjectsHandler
 -- =======================================================================
 
-publicProjectsHandlerSpec :: Config -> Spec
-publicProjectsHandlerSpec config =
+publicProjectsHandlerSpec :: Logger -> Config -> Spec
+publicProjectsHandlerSpec logger config =
     beforeAll (setupDb (portfolioDbConnString config) [seedProjects, seedTags, seedLinks]) $
         afterAll teardownDb $
             describe "publicProjectsHandler" $ do
 
                 it "returns every project without an id, tags sorted alphabetically" $ \db -> do
-                    result <- runHandler (publicProjectsHandler db)
+                    result <- runHandler (publicProjectsHandler logger db)
                     case result of
                         Left err -> expectationFailure ("expected success, got " <> show (errHTTPCode err))
                         Right projects -> do
@@ -127,7 +130,7 @@ publicProjectsHandlerSpec config =
 
                 it "returns an empty list when there are no projects" $ \_db -> do
                     empty <- setupDb (portfolioDbConnString config) []
-                    result <- runHandler (publicProjectsHandler empty)
+                    result <- runHandler (publicProjectsHandler logger empty)
                     teardownDb empty
                     case result of
                         Left err       -> expectationFailure ("expected success, got " <> show (errHTTPCode err))
@@ -135,7 +138,7 @@ publicProjectsHandlerSpec config =
 
                 it "returns 500 when the database is unreachable" $ \_db -> do
                     broken <- brokenDb
-                    result <- runHandler (publicProjectsHandler broken)
+                    result <- runHandler (publicProjectsHandler logger broken)
                     case result of
                         Right _  -> expectationFailure "expected 500, got a success"
                         Left err -> errHTTPCode err `shouldBe` 500
@@ -147,21 +150,21 @@ publicProjectsHandlerSpec config =
 -- publicTagsHandler
 -- =======================================================================
 
-publicTagsHandlerSpec :: Config -> Spec
-publicTagsHandlerSpec config =
+publicTagsHandlerSpec :: Logger -> Config -> Spec
+publicTagsHandlerSpec logger config =
     beforeAll (setupDb (portfolioDbConnString config) [seedTags]) $
         afterAll teardownDb $
             describe "publicTagsHandler" $ do
 
                 it "returns every tag, alphabetically" $ \db -> do
-                    result <- runHandler (publicTagsHandler db)
+                    result <- runHandler (publicTagsHandler logger db)
                     case result of
                         Left err     -> expectationFailure ("expected success, got " <> show (errHTTPCode err))
                         Right tags'  -> map name tags' `shouldBe` ["Haskell", "Postgresql"]
 
                 it "returns 500 when the database is unreachable" $ \_db -> do
                     broken <- brokenDb
-                    result <- runHandler (publicTagsHandler broken)
+                    result <- runHandler (publicTagsHandler logger broken)
                     case result of
                         Right _  -> expectationFailure "expected 500, got a success"
                         Left err -> errHTTPCode err `shouldBe` 500
@@ -170,14 +173,14 @@ publicTagsHandlerSpec config =
 -- adminProjectsGetHandler
 -- =======================================================================
 
-adminProjectsGetHandlerSpec :: Config -> Spec
-adminProjectsGetHandlerSpec config =
+adminProjectsGetHandlerSpec :: Logger -> Config -> Spec
+adminProjectsGetHandlerSpec logger config =
     beforeAll (setupDb (portfolioDbConnString config) [seedProjects, seedTags, seedLinks]) $
         afterAll teardownDb $
             describe "adminProjectsGetHandler" $ do
 
                 it "returns every project with its id and tags" $ \db -> do
-                    result <- runHandler (adminProjectsGetHandler db)
+                    result <- runHandler (adminProjectsGetHandler logger db)
                     case result of
                         Left err       -> expectationFailure ("expected success, got " <> show (errHTTPCode err))
                         Right projects -> do
@@ -188,7 +191,7 @@ adminProjectsGetHandlerSpec config =
 
                 it "returns 500 when the database is unreachable" $ \_db -> do
                     broken <- brokenDb
-                    result <- runHandler (adminProjectsGetHandler broken)
+                    result <- runHandler (adminProjectsGetHandler logger broken)
                     case result of
                         Right _  -> expectationFailure "expected 500, got a success"
                         Left err -> errHTTPCode err `shouldBe` 500
@@ -200,15 +203,15 @@ adminProjectsGetHandlerSpec config =
 -- adminProjectsPostHandler
 -- =======================================================================
 
-adminProjectsPostHandlerSpec :: Config -> Spec
-adminProjectsPostHandlerSpec config =
+adminProjectsPostHandlerSpec :: Logger -> Config -> Spec
+adminProjectsPostHandlerSpec logger config =
     describe "adminProjectsPostHandler" $ do
 
         it "inserts a project, links it to each existing tag, and returns it with a new id" $ do
             withFreshDb config [seedTags] $ \db -> do
                 let newProject = mkProject ["Haskell", "Postgresql"]
 
-                result <- runHandler (adminProjectsPostHandler db newProject)
+                result <- runHandler (adminProjectsPostHandler logger db newProject)
 
                 case result of
                     Left err ->
@@ -240,7 +243,7 @@ adminProjectsPostHandlerSpec config =
         it "inserts a project with no tags and no links" $ do
             withFreshDb config [seedTags] $ \db -> do
                 result <- runHandler
-                    (adminProjectsPostHandler db (mkProject []))
+                    (adminProjectsPostHandler logger db (mkProject []))
 
                 case result of
                     Left err ->
@@ -264,7 +267,7 @@ adminProjectsPostHandlerSpec config =
                         :: IO [Only Int]
 
                 result <- runHandler
-                    (adminProjectsPostHandler db
+                    (adminProjectsPostHandler logger db
                         (mkProject ["Haskell", "NotARealTag"]))
 
                 case result of
@@ -285,7 +288,7 @@ adminProjectsPostHandlerSpec config =
             broken <- brokenDb
 
             result <- runHandler
-                (adminProjectsPostHandler broken (mkProject []))
+                (adminProjectsPostHandler logger broken (mkProject []))
 
             destroyAllResources broken
 
@@ -300,8 +303,8 @@ adminProjectsPostHandlerSpec config =
 -- adminProjectsPutHandler
 -- =======================================================================
 
-adminProjectsPutHandlerSpec :: Config -> Spec
-adminProjectsPutHandlerSpec config =
+adminProjectsPutHandlerSpec :: Logger -> Config -> Spec
+adminProjectsPutHandlerSpec logger config =
     describe "adminProjectsPutHandler" $ do
 
         it "updates the project's fields and replaces its tag links" $ do
@@ -313,7 +316,7 @@ adminProjectsPutHandlerSpec config =
                             { title = "Updated Title" }
 
                 result <- runHandler
-                    (adminProjectsPutHandler db putUpdateTargetId updated)
+                    (adminProjectsPutHandler logger db putUpdateTargetId updated)
 
                 case result of
                     Left err ->
@@ -348,7 +351,7 @@ adminProjectsPutHandlerSpec config =
                 [seedPutProjects, seedTags, seedPutLinks] $ \db -> do
 
                 result <- runHandler
-                    (adminProjectsPutHandler db
+                    (adminProjectsPutHandler logger db
                         "00000000-0000-0000-0000-000000000000"
                         (mkProject ["Haskell"]))
 
@@ -383,7 +386,7 @@ adminProjectsPutHandlerSpec config =
                 [seedPutProjects, seedTags, seedPutLinks] $ \db -> do
 
                 result <- runHandler
-                    (adminProjectsPutHandler db
+                    (adminProjectsPutHandler logger db
                         putUntouchedId
                         (mkProject ["NotARealTag"]))
 
@@ -417,7 +420,7 @@ adminProjectsPutHandlerSpec config =
             broken <- brokenDb
 
             result <- runHandler
-                (adminProjectsPutHandler broken putUntouchedId (mkProject []))
+                (adminProjectsPutHandler logger broken putUntouchedId (mkProject []))
 
             destroyAllResources broken
 
@@ -463,14 +466,14 @@ adminProjectsPutHandlerSpec config =
 -- adminProjectsDeleteHandler
 -- =======================================================================
 
-adminProjectsDeleteHandlerSpec :: Config -> Spec
-adminProjectsDeleteHandlerSpec config =
+adminProjectsDeleteHandlerSpec :: Logger -> Config -> Spec
+adminProjectsDeleteHandlerSpec logger config =
     beforeAll (setupDb (portfolioDbConnString config) [seedProjects, seedTags, seedLinks]) $
         afterAll teardownDb $
             describe "adminProjectsDeleteHandler" $ do
 
                 it "deletes the project and cascades its tag links, tags themselves untouched" $ \db -> do
-                    result <- runHandler (adminProjectsDeleteHandler db taggedProjectId)
+                    result <- runHandler (adminProjectsDeleteHandler logger db taggedProjectId)
                     case result of
                         Left err -> expectationFailure ("expected success, got " <> show (errHTTPCode err))
                         Right nc -> nc `shouldBe` NoContent
@@ -490,14 +493,14 @@ adminProjectsDeleteHandlerSpec config =
                     tagCount `shouldBe` (2 :: Int)
 
                 it "returns 400 when the project id doesn't exist" $ \db -> do
-                    result <- runHandler (adminProjectsDeleteHandler db "00000000-0000-0000-0000-000000000000")
+                    result <- runHandler (adminProjectsDeleteHandler logger db "00000000-0000-0000-0000-000000000000")
                     case result of
                         Right _  -> expectationFailure "expected 400, got a success"
                         Left err -> errHTTPCode err `shouldBe` 400
 
                 it "returns 500 when the database is unreachable" $ \_db -> do
                     broken <- brokenDb
-                    result <- runHandler (adminProjectsDeleteHandler broken taggedProjectId)
+                    result <- runHandler (adminProjectsDeleteHandler logger broken taggedProjectId)
                     case result of
                         Right _  -> expectationFailure "expected 500, got a success"
                         Left err -> errHTTPCode err `shouldBe` 500
@@ -506,14 +509,14 @@ adminProjectsDeleteHandlerSpec config =
 -- adminTagsGetHandler
 -- =======================================================================
 
-adminTagsGetHandlerSpec :: Config -> Spec
-adminTagsGetHandlerSpec config =
+adminTagsGetHandlerSpec :: Logger -> Config -> Spec
+adminTagsGetHandlerSpec logger config =
     beforeAll (setupDb (portfolioDbConnString config) [seedTags]) $
         afterAll teardownDb $
             describe "adminTagsGetHandler" $ do
 
                 it "returns every tag with its id, alphabetically by name" $ \db -> do
-                    result <- runHandler (adminTagsGetHandler db)
+                    result <- runHandler (adminTagsGetHandler logger db)
                     case result of
                         Left err   -> expectationFailure ("expected success, got " <> show (errHTTPCode err))
                         Right tws  -> map (\tw -> (tagId tw, name (tag tw))) tws `shouldBe`
@@ -523,7 +526,7 @@ adminTagsGetHandlerSpec config =
 
                 it "returns 500 when the database is unreachable" $ \_db -> do
                     broken <- brokenDb
-                    result <- runHandler (adminTagsGetHandler broken)
+                    result <- runHandler (adminTagsGetHandler logger broken)
                     case result of
                         Right _  -> expectationFailure "expected 500, got a success"
                         Left err -> errHTTPCode err `shouldBe` 500
@@ -532,14 +535,14 @@ adminTagsGetHandlerSpec config =
 -- adminTagsPostHandler
 -- =======================================================================
 
-adminTagsPostHandlerSpec :: Config -> Spec
-adminTagsPostHandlerSpec config =
+adminTagsPostHandlerSpec :: Logger -> Config -> Spec
+adminTagsPostHandlerSpec logger config =
     describe "adminTagsPostHandler" $ do
 
         it "inserts a new tag and returns it with a new id" $ do
             withFreshDb config [seedTags] $ \db -> do
                 result <- runHandler
-                    (adminTagsPostHandler db (Tag "REST APIs"))
+                    (adminTagsPostHandler logger db (Tag "REST APIs"))
 
                 case result of
                     Left err ->
@@ -565,7 +568,7 @@ adminTagsPostHandlerSpec config =
                         :: IO [Only Int]
 
                 result <- runHandler
-                    (adminTagsPostHandler db (Tag "Haskell"))
+                    (adminTagsPostHandler logger db (Tag "Haskell"))
 
                 case result of
                     Right _ ->
@@ -585,7 +588,7 @@ adminTagsPostHandlerSpec config =
             broken <- brokenDb
 
             result <- runHandler
-                (adminTagsPostHandler broken (Tag "Anything"))
+                (adminTagsPostHandler logger broken (Tag "Anything"))
 
             destroyAllResources broken
 
@@ -600,14 +603,14 @@ adminTagsPostHandlerSpec config =
 -- adminTagsDeleteHandler
 -- =======================================================================
 
-adminTagsDeleteHandlerSpec :: Config -> Spec
-adminTagsDeleteHandlerSpec config =
+adminTagsDeleteHandlerSpec :: Logger -> Config -> Spec
+adminTagsDeleteHandlerSpec logger config =
     beforeAll (setupDb (portfolioDbConnString config) [seedProjects, seedTags, seedLinks]) $
         afterAll teardownDb $
             describe "adminTagsDeleteHandler" $ do
 
                 it "deletes a tag and cascades its links, without deleting the project" $ \db -> do
-                    result <- runHandler (adminTagsDeleteHandler db haskellTagId)
+                    result <- runHandler (adminTagsDeleteHandler logger db haskellTagId)
                     case result of
                         Left err -> expectationFailure ("expected success, got " <> show (errHTTPCode err))
                         Right nc -> nc `shouldBe` NoContent
@@ -628,14 +631,14 @@ adminTagsDeleteHandlerSpec config =
                     projectCount `shouldBe` (1 :: Int)
 
                 it "returns 400 when the tag id doesn't exist" $ \db -> do
-                    result <- runHandler (adminTagsDeleteHandler db "00000000-0000-0000-0000-000000000000")
+                    result <- runHandler (adminTagsDeleteHandler logger db "00000000-0000-0000-0000-000000000000")
                     case result of
                         Right _  -> expectationFailure "expected 400, got a success"
                         Left err -> errHTTPCode err `shouldBe` 400
 
                 it "returns 500 when the database is unreachable" $ \_db -> do
                     broken <- brokenDb
-                    result <- runHandler (adminTagsDeleteHandler broken postgresqlTagId)
+                    result <- runHandler (adminTagsDeleteHandler logger broken postgresqlTagId)
                     case result of
                         Right _  -> expectationFailure "expected 500, got a success"
                         Left err -> errHTTPCode err `shouldBe` 500

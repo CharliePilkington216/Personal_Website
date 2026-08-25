@@ -41,6 +41,7 @@ import Control.Exception
 import Database.PostgreSQL.Simple.Types
 import Data.Pool
 import Control.Monad.IO.Class
+import Logger
 
 -- JSON definitions for the Portfolio API
 
@@ -106,36 +107,38 @@ type PortfolioAdminTagsAPI = Get '[JSON] [TagWithID]
 
 -- portfolio server definition
 
-portfolioServer :: DB -> Server PortfolioAPI
-portfolioServer db =
-       publicProjectsHandler db
-  :<|> publicTagsHandler db
-  :<|> adminEndpointsHandler db
+portfolioServer :: Logger -> DB -> Server PortfolioAPI
+portfolioServer logger db =
+       publicProjectsHandler logger db
+  :<|> publicTagsHandler logger db
+  :<|> adminEndpointsHandler logger db
 
-adminEndpointsHandler :: DB -> (Text, Text) -> Server PortfolioAdminEndpointsAPI
-adminEndpointsHandler db _ = adminProjectsEndpointsHandler db
-                    :<|> adminTagsEndpointsHandler db
+adminEndpointsHandler :: Logger -> DB -> (Text, Text) -> Server PortfolioAdminEndpointsAPI
+adminEndpointsHandler logger db _ = adminProjectsEndpointsHandler logger db
+                    :<|> adminTagsEndpointsHandler logger db
 
-adminProjectsEndpointsHandler :: DB -> Server PortfolioAdminProjectsAPI
-adminProjectsEndpointsHandler db = adminProjectsGetHandler db
-                              :<|> adminProjectsPostHandler db
-                              :<|> adminProjectsPutHandler db
-                              :<|> adminProjectsDeleteHandler db
+adminProjectsEndpointsHandler :: Logger -> DB -> Server PortfolioAdminProjectsAPI
+adminProjectsEndpointsHandler logger db = adminProjectsGetHandler logger db
+                              :<|> adminProjectsPostHandler logger db
+                              :<|> adminProjectsPutHandler logger db
+                              :<|> adminProjectsDeleteHandler logger db
 
-adminTagsEndpointsHandler :: DB -> Server PortfolioAdminTagsAPI
-adminTagsEndpointsHandler db = adminTagsGetHandler db
-                            :<|> adminTagsPostHandler db
-                            :<|> adminTagsDeleteHandler db
+adminTagsEndpointsHandler :: Logger -> DB -> Server PortfolioAdminTagsAPI
+adminTagsEndpointsHandler logger db = adminTagsGetHandler logger db
+                            :<|> adminTagsPostHandler logger db
+                            :<|> adminTagsDeleteHandler logger db
 
 -- endpoint definitions
  
 -- selects all the portfolio projects and puts their tags into an array
 -- public endpoint, doesn't return UUIDs
-publicProjectsHandler :: DB -> Servant.Handler [Project]
-publicProjectsHandler db = do
+publicProjectsHandler :: Logger -> DB -> Servant.Handler [Project]
+publicProjectsHandler logger db = do
     result <- liftIO (try (withResource db fetchProjects) :: IO (Either SomeException [(Text, Text, Text, UTCTime, PGArray Text)]))
     case result of
-        Left _     -> throwError err500
+        Left _     -> do
+            liftIO $ logMessage logger "Internal database error on /portfolio/projects call, get projects"
+            throwError err500
         Right rows -> pure (map toProject rows)
   where
     fetchProjects :: Connection -> IO [(Text, Text, Text, UTCTime, PGArray Text)]
@@ -159,11 +162,13 @@ publicProjectsHandler db = do
  
 -- selects all tags from the database
 -- public endpoint, doesn't return UUIDs
-publicTagsHandler :: DB -> Servant.Handler [Tag]
-publicTagsHandler db = do
+publicTagsHandler :: Logger -> DB -> Servant.Handler [Tag]
+publicTagsHandler logger db = do
     result <- liftIO (try (withResource db fetchTags) :: IO (Either SomeException [Only Text]))
     case result of
-        Left _     -> throwError err500
+        Left _     -> do
+            liftIO $ logMessage logger "Internal database error on /portfolio/tags call, get tags"            
+            throwError err500
         Right rows -> pure (map (\(Only n) -> Tag n) rows)
   where
     fetchTags :: Connection -> IO [Only Text]
@@ -171,11 +176,13 @@ publicTagsHandler db = do
  
 -- selects all the portfolio projects and puts their tags into an array
 -- authorised endpoint, does return UUIDs
-adminProjectsGetHandler :: DB -> Servant.Handler [ProjectWithID]
-adminProjectsGetHandler db = do
+adminProjectsGetHandler :: Logger -> DB -> Servant.Handler [ProjectWithID]
+adminProjectsGetHandler logger db = do
     result <- liftIO (try (withResource db fetchProjects) :: IO (Either SomeException [(Text, Text, Text, Text, UTCTime, PGArray Text)]))
     case result of
-        Left _     -> throwError err500
+        Left _     -> do
+            liftIO $ logMessage logger "Internal database error on GET /portfolio/admin/projects call, get projects"
+            throwError err500
         Right rows -> pure (map toProjectWithID rows)
   where
     fetchProjects :: Connection -> IO [(Text, Text, Text, Text, UTCTime, PGArray Text)]
@@ -203,12 +210,16 @@ adminProjectsGetHandler db = do
 -- inserts a new project and links it to each of its tags
 -- throws 400 if any given tag name does not exist in the database
 -- on success returns the given project along with its newly assigned id
-adminProjectsPostHandler :: DB -> Project -> Servant.Handler ProjectWithID
-adminProjectsPostHandler db proj = do
+adminProjectsPostHandler :: Logger -> DB -> Project -> Servant.Handler ProjectWithID
+adminProjectsPostHandler logger db proj = do
     result <- liftIO (try (withResource db (insertProjectWithTags proj)) :: IO (Either SomeException (Maybe Text)))
     case result of
-        Left _            -> throwError err500
-        Right Nothing     -> throwError err400
+        Left _            -> do
+            liftIO $ logMessage logger "Internal database error on POST /portfolio/admin/projects call, post project"
+            throwError err500
+        Right Nothing     -> do
+            liftIO $ logMessage logger "Bad request on POST /portfolio/admin/projects call, non existent tag"
+            throwError err400
         Right (Just pid)  -> pure ProjectWithID { projectId = pid, project = proj }
   where
     insertProjectWithTags :: Project -> Connection -> IO (Maybe Text)
@@ -230,12 +241,16 @@ adminProjectsPostHandler db proj = do
 -- and replaces its tag links with the given tag names
 -- throws 400 if the project id does not exist, or if any given tag name does not exist
 -- on success returns the given project along with the given id
-adminProjectsPutHandler :: DB -> Text -> Project -> Servant.Handler ProjectWithID
-adminProjectsPutHandler db pid proj = do
+adminProjectsPutHandler :: Logger -> DB -> Text -> Project -> Servant.Handler ProjectWithID
+adminProjectsPutHandler logger db pid proj = do
     result <- liftIO (try (withResource db (updateProjectWithTags pid proj)) :: IO (Either SomeException Bool))
     case result of
-        Left _      -> throwError err500
-        Right False -> throwError err400
+        Left _      -> do
+            liftIO $ logMessage logger "Internal database error on PUT /portfolio/admin/projects call, put project"
+            throwError err500
+        Right False -> do
+            liftIO $ logMessage logger "Bad request on PUT /portfolio/admin/projects call, non existent tag or project"
+            throwError err400
         Right True  -> pure ProjectWithID { projectId = pid, project = proj }
   where
     updateProjectWithTags :: Text -> Project -> Connection -> IO Bool
@@ -261,12 +276,16 @@ adminProjectsPutHandler db pid proj = do
 -- (its project_tag_link rows are removed automatically via ON DELETE CASCADE)
 -- throws 400 if the project id does not exist
 -- throws 500 on any other database failure
-adminProjectsDeleteHandler :: DB -> Text -> Servant.Handler NoContent
-adminProjectsDeleteHandler db pid = do
+adminProjectsDeleteHandler :: Logger -> DB -> Text -> Servant.Handler NoContent
+adminProjectsDeleteHandler logger db pid = do
     result <- liftIO (try (withResource db (deleteProject pid)) :: IO (Either SomeException Int64))
     case result of
-        Left _  -> throwError err500
-        Right 0 -> throwError err400
+        Left _  -> do
+            liftIO $ logMessage logger "Internal database error on DELETE /portfolio/admin/projects call, delete project"            
+            throwError err500
+        Right 0 -> do
+            liftIO $ logMessage logger "Bad request on DELETE /portfolio/admin/projects call, non existent project id"
+            throwError err400
         Right _ -> pure NoContent
   where
     deleteProject :: Text -> Connection -> IO Int64
@@ -274,11 +293,13 @@ adminProjectsDeleteHandler db pid = do
  
 -- returns every tag including its id
 -- throws 500 on any database failure
-adminTagsGetHandler :: DB -> Servant.Handler [TagWithID]
-adminTagsGetHandler db = do
+adminTagsGetHandler :: Logger -> DB -> Servant.Handler [TagWithID]
+adminTagsGetHandler logger db = do
     result <- liftIO (try (withResource db fetchTags) :: IO (Either SomeException [(Text, Text)]))
     case result of
-        Left _     -> throwError err500
+        Left _     -> do
+            liftIO $ logMessage logger "Internal database error on GET /portfolio/admin/tags call, get tags"
+            throwError err500
         Right rows -> pure (map (\(tid, n) -> TagWithID { tagId = tid, tag = Tag n }) rows)
   where
     fetchTags :: Connection -> IO [(Text, Text)]
@@ -288,12 +309,16 @@ adminTagsGetHandler db = do
 -- throws 400 if a tag with that name already exists
 -- throws 500 on any other database failure
 -- on success returns the given tag along with its newly assigned id
-adminTagsPostHandler :: DB -> Tag -> Servant.Handler TagWithID
-adminTagsPostHandler db t = do
+adminTagsPostHandler :: Logger -> DB -> Tag -> Servant.Handler TagWithID
+adminTagsPostHandler logger db t = do
     result <- liftIO (try (withResource db (insertTag t)) :: IO (Either SomeException (Maybe Text)))
     case result of
-        Left _           -> throwError err500
-        Right Nothing    -> throwError err400
+        Left _           -> do
+            liftIO $ logMessage logger "Internal database error on POST /portfolio/admin/tags call, post tag"
+            throwError err500
+        Right Nothing    -> do
+            liftIO $ logMessage logger "Bad Request on POST /portfolio/admin/tags call, duplicate tag name"
+            throwError err400
         Right (Just tid) -> pure TagWithID { tagId = tid, tag = t }
   where
     insertTag :: Tag -> Connection -> IO (Maybe Text)
@@ -311,12 +336,16 @@ adminTagsPostHandler db t = do
 -- (its project_tag_link rows are removed automatically via ON DELETE CASCADE)
 -- throws 400 if the tag id does not exist
 -- throws 500 on any other database failure
-adminTagsDeleteHandler :: DB -> Text -> Servant.Handler NoContent
-adminTagsDeleteHandler db tid = do
+adminTagsDeleteHandler :: Logger -> DB -> Text -> Servant.Handler NoContent
+adminTagsDeleteHandler logger db tid = do
     result <- liftIO (try (withResource db (deleteTag tid)) :: IO (Either SomeException Int64))
     case result of
-        Left _  -> throwError err500
-        Right 0 -> throwError err400
+        Left _  -> do
+            liftIO $ logMessage logger "Internal database error on DELETE /portfolio/admin/tags call, delete tag"
+            throwError err500
+        Right 0 -> do
+            liftIO $ logMessage logger "Bad request on DELETE /portfolio/admin/tags call, nopn existent tag id"
+            throwError err400
         Right _ -> pure NoContent
   where
     deleteTag :: Text -> Connection -> IO Int64

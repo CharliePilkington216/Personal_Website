@@ -15,6 +15,7 @@ import qualified OpenSSL.Session as SSL
 import Servant
 import Network.Wai.Handler.Warp (run)
 import qualified Email
+import Logger (newLogger)
 
 -- API type definition
 
@@ -32,6 +33,8 @@ main :: IO ()
 main = withOpenSSL $ do
     config <- loadConfig
 
+    logger <- newLogger "logs/server.log"
+
     -- Database pools
     authDB <- createDB (authDbConnString config)
     portfolioDB <- createDB (portfolioDbConnString config)
@@ -45,8 +48,8 @@ main = withOpenSSL $ do
         verifyAccessToken' = verifyAccessToken (jwtSecret config) (domain config)
         verifyRefreshToken' = verifyRefreshToken (jwtSecret config) (domain config)
 
-        adminAuthHandler' = adminAuthHandler verifyAccessToken'
-        refreshAuthHandler' = refreshAuthHandler verifyRefreshToken'
+        adminAuthHandler' = adminAuthHandler logger verifyAccessToken'
+        refreshAuthHandler' = refreshAuthHandler logger verifyRefreshToken'
 
         context =
              adminAuthHandler'
@@ -61,9 +64,9 @@ main = withOpenSSL $ do
             }
 
         server =
-             authServer authDB createAccessToken' createRefreshToken'
-          :<|> portfolioServer portfolioDB
-          :<|> tutoringServer tutoringDB emailSettings (notifyEmail config)
+             authServer logger authDB createAccessToken' createRefreshToken'
+          :<|> portfolioServer logger portfolioDB
+          :<|> tutoringServer logger tutoringDB emailSettings (notifyEmail config)
 
     run 8080 $
       serveWithContext api context server

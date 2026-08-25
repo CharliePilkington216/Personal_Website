@@ -32,6 +32,7 @@ import Servant (ServerError (..))
 import Servant.API.ResponseHeaders (getHeaders, getResponse)
 import Servant.Server (runHandler)
 import Web.Cookie (SetCookie (..), parseSetCookie, sameSiteStrict)
+import Logger
 
 -- creates a test db conn but needs a pool, the pool only has 1 connection so we can rollback, don't change this
 setupDb :: Text -> [Connection -> IO ()] -> IO DB
@@ -81,23 +82,25 @@ seedAdmin conn =
 spec :: Spec
 spec = do
     config <- runIO loadConfig
-    loginHandlerSpec config
-    refreshHandlerSpec config
-    logoutHandlerSpec config
+    logger <- runIO $ newLogger "logs/test.log"
+    loginHandlerSpec logger config
+    refreshHandlerSpec logger config
+    logoutHandlerSpec logger config
+    runIO $ closeLogger logger
 
 -- =======================================================================
 -- loginHandler
 -- =======================================================================
 
-loginHandlerSpec :: Config -> Spec
-loginHandlerSpec config =
+loginHandlerSpec :: Logger -> Config -> Spec
+loginHandlerSpec logger config =
     beforeAll (setupDb (authDbConnString config) [seedAdmin]) $
         afterAll teardownDb $
             describe "loginHandler" $ do
 
                 it "returns an access token and refresh cookie for correct credentials, \
                    \and persists a new session and token" $ \db -> do
-                    result <- runHandler (loginHandler db (fakeMinter "access") (fakeMinter "refresh") req)
+                    result <- runHandler (loginHandler logger db (fakeMinter "access") (fakeMinter "refresh") req)
                     case result of
                         Left err -> expectationFailure ("expected success, got " <> show (errHTTPCode err))
                         Right resp -> do
@@ -130,40 +133,40 @@ loginHandlerSpec config =
                             tokenExists `shouldBe` True
 
                 it "returns 401 for an email that isn't registered" $ \db -> do
-                    result <- runHandler (loginHandler db (fakeMinter "access") (fakeMinter "refresh")
+                    result <- runHandler (loginHandler logger db (fakeMinter "access") (fakeMinter "refresh")
                         (LogInRequest { email = "nobody@example.com", password = "password" }))
                     case result of
                         Right _  -> expectationFailure "expected 401, got a success"
                         Left err -> errHTTPCode err `shouldBe` 401
 
                 it "returns 401 for the wrong password" $ \db -> do
-                    result <- runHandler (loginHandler db (fakeMinter "access") (fakeMinter "refresh")
+                    result <- runHandler (loginHandler logger db (fakeMinter "access") (fakeMinter "refresh")
                         (LogInRequest { email = "admin@example.com", password = "not-the-password" }))
                     case result of
                         Right _  -> expectationFailure "expected 401, got a success"
                         Left err -> errHTTPCode err `shouldBe` 401
 
                 it "returns 500 when the access token minter fails" $ \db -> do
-                    result <- runHandler (loginHandler db failingMinter (fakeMinter "refresh") req)
+                    result <- runHandler (loginHandler logger db failingMinter (fakeMinter "refresh") req)
                     case result of
                         Right _  -> expectationFailure "expected 500, got a success"
                         Left err -> errHTTPCode err `shouldBe` 500
 
                 it "returns 500 when the refresh token minter fails" $ \db -> do
-                    result <- runHandler (loginHandler db (fakeMinter "access") failingMinter req)
+                    result <- runHandler (loginHandler logger db (fakeMinter "access") failingMinter req)
                     case result of
                         Right _  -> expectationFailure "expected 500, got a success"
                         Left err -> errHTTPCode err `shouldBe` 500
 
                 it "returns 500 when both minters fail" $ \db -> do
-                    result <- runHandler (loginHandler db failingMinter failingMinter req)
+                    result <- runHandler (loginHandler logger db failingMinter failingMinter req)
                     case result of
                         Right _  -> expectationFailure "expected 500, got a success"
                         Left err -> errHTTPCode err `shouldBe` 500
 
                 it "returns 500 when the database is unreachable" $ \_db -> do
                     broken <- brokenDb
-                    result <- runHandler (loginHandler broken (fakeMinter "access") (fakeMinter "refresh") req)
+                    result <- runHandler (loginHandler logger broken (fakeMinter "access") (fakeMinter "refresh") req)
                     case result of
                         Right _  -> expectationFailure "expected 500, got a success"
                         Left err -> errHTTPCode err `shouldBe` 500
@@ -174,14 +177,14 @@ loginHandlerSpec config =
 -- refreshHandler
 -- =======================================================================
 
-refreshHandlerSpec :: Config -> Spec
-refreshHandlerSpec config =
+refreshHandlerSpec :: Logger -> Config -> Spec
+refreshHandlerSpec logger config =
     beforeAll (setupDb (authDbConnString config) [seedAdmin, seedSessions, seedTokens]) $
         afterAll teardownDb $
             describe "refreshHandler" $ do
 
                 it "rotates the token and returns a new access/refresh pair for an active session" $ \db -> do
-                    result <- runHandler (refreshHandler db (fakeMinter "access") (fakeMinter "refresh")
+                    result <- runHandler (refreshHandler logger db (fakeMinter "access") (fakeMinter "refresh")
                         ("active-token", seededAdminId, activeSessionId))
                     case result of
                         Left err -> expectationFailure ("expected success, got " <> show (errHTTPCode err))
@@ -203,28 +206,28 @@ refreshHandlerSpec config =
                             newTokenExists `shouldBe` True
 
                 it "returns 401 for a session_id that doesn't exist" $ \db -> do
-                    result <- runHandler (refreshHandler db (fakeMinter "access") (fakeMinter "refresh")
+                    result <- runHandler (refreshHandler logger db (fakeMinter "access") (fakeMinter "refresh")
                         ("whatever", seededAdminId, "00000000-0000-0000-0000-000000000000"))
                     case result of
                         Right _  -> expectationFailure "expected 401, got a success"
                         Left err -> errHTTPCode err `shouldBe` 401
 
                 it "returns 401 for a revoked session" $ \db -> do
-                    result <- runHandler (refreshHandler db (fakeMinter "access") (fakeMinter "refresh")
+                    result <- runHandler (refreshHandler logger db (fakeMinter "access") (fakeMinter "refresh")
                         ("whatever", seededAdminId, revokedSessionId))
                     case result of
                         Right _  -> expectationFailure "expected 401, got a success"
                         Left err -> errHTTPCode err `shouldBe` 401
 
                 it "returns 401 for an expired session" $ \db -> do
-                    result <- runHandler (refreshHandler db (fakeMinter "access") (fakeMinter "refresh")
+                    result <- runHandler (refreshHandler logger db (fakeMinter "access") (fakeMinter "refresh")
                         ("whatever", seededAdminId, expiredSessionId))
                     case result of
                         Right _  -> expectationFailure "expected 401, got a success"
                         Left err -> errHTTPCode err `shouldBe` 401
 
                 it "returns 401 when the admin_id doesn't match the session's owner" $ \db -> do
-                    result <- runHandler (refreshHandler db (fakeMinter "access") (fakeMinter "refresh")
+                    result <- runHandler (refreshHandler logger db (fakeMinter "access") (fakeMinter "refresh")
                         ("whatever", "00000000-0000-0000-0000-000000000000", adminMismatchSessionId))
                     case result of
                         Right _  -> expectationFailure "expected 401, got a success"
@@ -232,7 +235,7 @@ refreshHandlerSpec config =
 
                 it "returns 401 for a refresh token that isn't recognised for the session, \
                    \and doesn't touch the session" $ \db -> do
-                    result <- runHandler (refreshHandler db (fakeMinter "access") (fakeMinter "refresh")
+                    result <- runHandler (refreshHandler logger db (fakeMinter "access") (fakeMinter "refresh")
                         ("never-issued-token", seededAdminId, unrecognisedTokenSessionId))
                     case result of
                         Right _  -> expectationFailure "expected 401, got a success"
@@ -245,7 +248,7 @@ refreshHandlerSpec config =
 
                 it "returns 401 and revokes the WHOLE session when an already-rotated-out \
                    \token is replayed (reuse detection)" $ \db -> do
-                    result <- runHandler (refreshHandler db (fakeMinter "access") (fakeMinter "refresh")
+                    result <- runHandler (refreshHandler logger db (fakeMinter "access") (fakeMinter "refresh")
                         ("replayed-token", seededAdminId, replaySessionId))
                     case result of
                         Right _  -> expectationFailure "expected 401, got a success"
@@ -258,7 +261,7 @@ refreshHandlerSpec config =
 
                 it "returns 500 when a minter fails after validation succeeds, having \
                    \already burned the presented token" $ \db -> do
-                    result <- runHandler (refreshHandler db failingMinter failingMinter
+                    result <- runHandler (refreshHandler logger db failingMinter failingMinter
                         ("mint-failure-token", seededAdminId, mintFailureSessionId))
                     case result of
                         Right _  -> expectationFailure "expected 500, got a success"
@@ -270,7 +273,7 @@ refreshHandlerSpec config =
 
                 it "returns 500 when the database is unreachable" $ \_db -> do
                     broken <- brokenDb
-                    result <- runHandler (refreshHandler broken (fakeMinter "access") (fakeMinter "refresh")
+                    result <- runHandler (refreshHandler logger broken (fakeMinter "access") (fakeMinter "refresh")
                         ("whatever", seededAdminId, activeSessionId))
                     case result of
                         Right _  -> expectationFailure "expected 500, got a success"
@@ -317,14 +320,14 @@ refreshHandlerSpec config =
 -- logoutHandler
 -- =======================================================================
 
-logoutHandlerSpec :: Config -> Spec
-logoutHandlerSpec config =
+logoutHandlerSpec :: Logger -> Config -> Spec
+logoutHandlerSpec logger config =
     beforeAll (setupDb (authDbConnString config) [seedAdmin, seedSessions]) $
         afterAll teardownDb $
             describe "logoutHandler" $ do
 
                 it "revokes the session and clears the refresh cookie" $ \db -> do
-                    result <- runHandler (logoutHandler db ("whatever", seededAdminId, activeSessionId))
+                    result <- runHandler (logoutHandler logger db ("whatever", seededAdminId, activeSessionId))
                     case result of
                         Left err -> expectationFailure ("expected success, got " <> show (errHTTPCode err))
                         Right resp -> do
@@ -344,13 +347,13 @@ logoutHandlerSpec config =
 
                 it "still succeeds (no-op) when the session_id doesn't exist -- current \
                    \behaviour: only a DB exception produces a 500, a zero-row UPDATE doesn't" $ \db -> do
-                    result <- runHandler (logoutHandler db ("whatever", seededAdminId, "00000000-0000-0000-0000-000000000000"))
+                    result <- runHandler (logoutHandler logger db ("whatever", seededAdminId, "00000000-0000-0000-0000-000000000000"))
                     case result of
                         Left err -> expectationFailure ("expected success, got " <> show (errHTTPCode err))
                         Right _  -> pure ()
 
                 it "does NOT revoke the session when admin_id doesn't match session_id's owner" $ \db -> do
-                    result <- runHandler (logoutHandler db ("whatever", "00000000-0000-0000-0000-000000000000", adminMismatchSessionId))
+                    result <- runHandler (logoutHandler logger db ("whatever", "00000000-0000-0000-0000-000000000000", adminMismatchSessionId))
                     case result of
                         Left err -> expectationFailure ("expected success, got " <> show (errHTTPCode err))
                         Right _  -> pure ()
@@ -362,7 +365,7 @@ logoutHandlerSpec config =
 
                 it "returns 500 when the database is unreachable" $ \_db -> do
                     broken <- brokenDb
-                    result <- runHandler (logoutHandler broken ("whatever", seededAdminId, activeSessionId))
+                    result <- runHandler (logoutHandler logger broken ("whatever", seededAdminId, activeSessionId))
                     case result of
                         Right _  -> expectationFailure "expected 500, got a success"
                         Left err -> errHTTPCode err `shouldBe` 500

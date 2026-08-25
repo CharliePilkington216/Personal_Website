@@ -67,6 +67,7 @@ library
                       , Database
                       , Email
                       , InquiryEmail
+                      , Logger
 
     build-depends:      base ^>=4.20.2.0
                       , aeson
@@ -137,7 +138,6 @@ test-suite PersonalWebsite-test
     other-modules:      CryptoSpec
                       , JWTSpec
                       , ConfigSpec
-                      , DatabaseSpec
                       , AuthorizationSpec
                       , PortfolioSpec
 

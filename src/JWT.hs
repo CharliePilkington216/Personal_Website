@@ -63,6 +63,7 @@ import Data.Aeson.Types (Parser)
 import Network.Wai (Request, requestHeaders)
 import Servant
 import Servant.Server.Experimental.Auth
+import Logger
 
 -- Local orphan instance: this version of crypton doesn't provide a generic
 -- "lift MonadRandom through any transformer" instance, so ExceptT JWTError IO
@@ -214,18 +215,20 @@ type AdminAuthResult = (Text, Text)
 -- runs before the client reaches any admin endpoints
 -- takes the Authorization: Bearer {token} header and verifies the token
 -- returns (admin_id, session_id) when successful
-adminAuthHandler :: (Text -> IO (Either String AdminAuthResult)) -> AuthHandler Request AdminAuthResult
-adminAuthHandler verifyAccessToken' = mkAuthHandler handler
+adminAuthHandler :: Logger -> (Text -> IO (Either String AdminAuthResult)) -> AuthHandler Request AdminAuthResult
+adminAuthHandler logger verifyAccessToken' = mkAuthHandler handler
   where
     handler :: Request -> Handler AdminAuthResult
     handler req =
       case lookup "Authorization" (requestHeaders req) of
-        Nothing ->
+        Nothing -> do
+          liftIO $ logMessage logger "Bad request on /admin, request made without Authorization header"
           throwError err401
 
         Just header ->
           case BS.stripPrefix "Bearer " header of
-            Nothing ->
+            Nothing -> do
+              liftIO $ logMessage logger "Bad request on /admin, request made without Bearer token"
               throwError err401
 
             Just token -> do
@@ -233,7 +236,8 @@ adminAuthHandler verifyAccessToken' = mkAuthHandler handler
                 verifyAccessToken' (TE.decodeUtf8 token)
 
               case result of
-                Left _ ->
+                Left _ -> do
+                  liftIO $ logMessage logger "Unauthorized access on /admin, request made without valid access token"
                   throwError err401
 
                 Right authResult ->
@@ -244,18 +248,20 @@ type RefreshAuthResult = (Text, Text, Text)
 -- runs before reaching the /auth/refresh or /auth/logout endpoints
 -- takes the refresh token from cookies and verifies it
 -- returns (refresh_token, admin_id, session_id) if successful
-refreshAuthHandler :: (Text -> IO (Either String (Text, Text)))-> AuthHandler Request RefreshAuthResult
-refreshAuthHandler verifyRefreshToken' = mkAuthHandler handler
+refreshAuthHandler :: Logger -> (Text -> IO (Either String (Text, Text)))-> AuthHandler Request RefreshAuthResult
+refreshAuthHandler logger verifyRefreshToken' = mkAuthHandler handler
   where
     handler :: Request -> Handler RefreshAuthResult
     handler req =
       case lookup "Cookie" (requestHeaders req) of
-        Nothing ->
+        Nothing -> do
+          liftIO $ logMessage logger "Bad request on /auth, request made without cookies"
           throwError err401
 
         Just cookieHeader ->
           case extractRefreshToken (TE.decodeUtf8 cookieHeader) of
-            Nothing ->
+            Nothing -> do
+              liftIO $ logMessage logger "Bad request on /auth, request made without refresh_token in cookies"
               throwError err401
 
             Just refreshToken -> do
@@ -263,7 +269,8 @@ refreshAuthHandler verifyRefreshToken' = mkAuthHandler handler
                 verifyRefreshToken' refreshToken
 
               case result of
-                Left _ ->
+                Left _ -> do
+                  liftIO $ logMessage logger "Unauthorized access on /auth, invalid refresh token"
                   throwError err401
 
                 Right (adminId, sessionId) ->
