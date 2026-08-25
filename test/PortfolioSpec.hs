@@ -67,7 +67,16 @@ brokenDb = createPool (connectPostgreSQL "postgresql://invalid:invalid@localhost
 withFreshDb :: Config -> [Connection -> IO ()] -> (DB -> IO a) -> IO a
 withFreshDb config seedActions action = do
     db <- setupDbNoTransaction (portfolioDbConnString config) seedActions
-    action db `finally` destroyAllResources db
+    action db `finally` cleanupAndDestroy db
+
+cleanupAndDestroy :: DB -> IO ()
+cleanupAndDestroy pool = do
+    withResource pool $ \conn -> do
+        _ <- execute_ conn "DELETE FROM project_tag_link"
+        _ <- execute_ conn "DELETE FROM projects"
+        _ <- execute_ conn "DELETE FROM tags"
+        pure ()
+    destroyAllResources pool
 
 setupDbNoTransaction :: Text -> [Connection -> IO ()] -> IO DB
 setupDbNoTransaction connString seedActions = do
@@ -99,11 +108,11 @@ spec = do
     publicProjectsHandlerSpec logger config
     publicTagsHandlerSpec logger config
     adminProjectsGetHandlerSpec logger config
-    --adminProjectsPostHandlerSpec logger config
-    --adminProjectsPutHandlerSpec logger config
+    adminProjectsPostHandlerSpec logger config
+    adminProjectsPutHandlerSpec logger config
     adminProjectsDeleteHandlerSpec logger config
     adminTagsGetHandlerSpec logger config
-    --adminTagsPostHandlerSpec logger config
+    adminTagsPostHandlerSpec logger config
     adminTagsDeleteHandlerSpec logger config
     runIO $ closeLogger logger
 
