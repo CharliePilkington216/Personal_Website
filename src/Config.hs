@@ -1,8 +1,19 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 -- module to load in environment variables
-module Config (Config, authDbConnString, portfolioDbConnString, inquiryDbConnString, jwtSecret, domain, loadConfig) where
-
+module Config
+  ( Config
+  , authDbConnString
+  , portfolioDbConnString
+  , inquiryDbConnString
+  , jwtSecret
+  , domain
+  , resendApiKey
+  , fromEmail
+  , notifyEmail
+  , loadConfig
+  ) where
+    
 import Configuration.Dotenv (loadFile, defaultConfig)
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -15,6 +26,12 @@ data Config = Config
   , inquiryDbConnString   :: Text
   , jwtSecret             :: Text
   , domain                :: Text
+  , resendApiKey          :: Text
+  -- ^ Resend API key used by 'Email.sendEmail'.
+  , fromEmail             :: Text
+  -- ^ Sending address — must be on a domain verified with Resend.
+  , notifyEmail           :: Text
+  -- ^ Where new tutoring inquiries get emailed (see 'InquiryEmail').
   }
 
 -- will crash the program if this fails to run successfully
@@ -28,6 +45,9 @@ loadConfig = do
     <*> require "INQUIRYDB_CONN_STRING"
     <*> require "JWT_SECRET"
     <*> require "DOMAIN"
+    <*> require "RESEND_API_KEY"
+    <*> require "FROM_EMAIL"
+    <*> require "NOTIFY_EMAIL"
   where
     require :: String -> IO Text
     require key = do
