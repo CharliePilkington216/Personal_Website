@@ -78,8 +78,8 @@ recordAndNotifyInquiry logger pool settings notifyTo details = do
     [Only iid] <-
       query
         conn
-        "INSERT INTO inquiries (name, email, tutoring, info, status) \
-        \VALUES (?, ?, ?::tutoring_type, ?, 'pending'::inquiry_status) \
+        "INSERT INTO inquiries (name, email, tutoring, info) \
+        \VALUES (?, ?, ?::tutoring_type, ?) \
         \RETURNING inquiry_id::text"
         (detailsName details, detailsEmail details, detailsCategory details, detailsInfo details)
     pure iid
