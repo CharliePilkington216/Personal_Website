@@ -38,6 +38,7 @@ main = withOpenSSL $ do
     -- Database pools
     authDB <- createDB (authDbConnString config)
     portfolioDB <- createDB (portfolioDbConnString config)
+    portfolioAdminDB <- createDB (portfolioDbAdminConnString config)
     tutoringDB <- createDB (inquiryDbConnString config)
 
     httpManager <- newManager (opensslManagerSettings SSL.context)
@@ -65,7 +66,7 @@ main = withOpenSSL $ do
 
         server =
              authServer logger authDB createAccessToken' createRefreshToken'
-          :<|> portfolioServer logger portfolioDB
+          :<|> portfolioServer logger portfolioDB portfolioAdminDB
           :<|> tutoringServer logger tutoringDB emailSettings (notifyEmail config)
 
     run 8080 $

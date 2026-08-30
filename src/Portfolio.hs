@@ -107,11 +107,11 @@ type PortfolioAdminTagsAPI = Get '[JSON] [TagWithID]
 
 -- portfolio server definition
 
-portfolioServer :: Logger -> DB -> Server PortfolioAPI
-portfolioServer logger db =
+portfolioServer :: Logger -> DB -> DB -> Server PortfolioAPI
+portfolioServer logger db admindb =
        publicProjectsHandler logger db
   :<|> publicTagsHandler logger db
-  :<|> adminEndpointsHandler logger db
+  :<|> adminEndpointsHandler logger admindb
 
 adminEndpointsHandler :: Logger -> DB -> (Text, Text) -> Server PortfolioAdminEndpointsAPI
 adminEndpointsHandler logger db _ = adminProjectsEndpointsHandler logger db

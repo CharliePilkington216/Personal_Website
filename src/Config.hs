@@ -5,6 +5,7 @@ module Config
   ( Config
   , authDbConnString
   , portfolioDbConnString
+  , portfolioDbAdminConnString
   , inquiryDbConnString
   , jwtSecret
   , domain
@@ -21,17 +22,15 @@ import System.Environment (lookupEnv)
 import System.Exit (die)
 
 data Config = Config
-  { authDbConnString      :: Text
-  , portfolioDbConnString :: Text
-  , inquiryDbConnString   :: Text
-  , jwtSecret             :: Text
-  , domain                :: Text
-  , resendApiKey          :: Text
-  -- ^ Resend API key used by 'Email.sendEmail'.
-  , fromEmail             :: Text
-  -- ^ Sending address — must be on a domain verified with Resend.
-  , notifyEmail           :: Text
-  -- ^ Where new tutoring inquiries get emailed (see 'InquiryEmail').
+  { authDbConnString            :: Text
+  , portfolioDbConnString       :: Text
+  , portfolioDbAdminConnString  :: Text
+  , inquiryDbConnString         :: Text
+  , jwtSecret                   :: Text
+  , domain                      :: Text
+  , resendApiKey                :: Text
+  , fromEmail                   :: Text
+  , notifyEmail                 :: Text
   }
 
 -- will crash the program if this fails to run successfully
@@ -42,6 +41,7 @@ loadConfig = do
   Config
     <$> require "AUTHDB_CONN_STRING"
     <*> require "PORTFOLIODB_CONN_STRING"
+    <*> require "PORTFOLIODB_ADMIN_CONN_STRING"
     <*> require "INQUIRYDB_CONN_STRING"
     <*> require "JWT_SECRET"
     <*> require "DOMAIN"
