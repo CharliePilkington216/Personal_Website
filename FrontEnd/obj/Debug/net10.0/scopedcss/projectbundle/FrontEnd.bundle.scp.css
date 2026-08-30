@@ -139,9 +139,34 @@ main[b-0jdudv06m1] {
     color: white;
 }
 
+.nav-menu-icon[b-39jngn886s] {
+    display: inline-flex;
+    width: 1.5rem;
+    height: 1.5rem;
+    margin-right: 0.5rem;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+}
+
 .nav-item[b-39jngn886s]  a:hover {
     background-color: rgba(255,255,255,0.1);
     color: white;
+}
+
+.nav-scrollable[b-39jngn886s] {
+    display: flex;
+    flex-direction: column;
+}
+
+.nav-scrollable nav[b-39jngn886s] {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.admin-nav-item[b-39jngn886s] {
+    margin-top: auto;
 }
 
 @media (min-width: 641px) {
@@ -150,12 +175,10 @@ main[b-0jdudv06m1] {
     }
 
     .collapse[b-39jngn886s] {
-        /* Never collapse the sidebar for wide screens */
         display: block;
     }
 
     .nav-scrollable[b-39jngn886s] {
-        /* Allow sidebar to scroll for tall menus */
         height: calc(100vh - 3.5rem);
         overflow-y: auto;
     }
