@@ -1,0 +1,117 @@
+.education-header {
+    border-bottom: 1px solid #d9e1e8;
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+}
+
+.education-eyebrow {
+    color: #147d92;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+}
+
+.education-header h1 {
+    color: #172b4d;
+    font-size: clamp(2.25rem, 5vw, 4rem);
+    margin-bottom: 0.75rem;
+}
+
+.education-intro {
+    color: #5d6b7a;
+    font-size: 1.1rem;
+    margin-bottom: 0;
+}
+
+.education-sections {
+    border-top: 1px solid #d9e1e8;
+}
+
+.education-section {
+    border-bottom: 1px solid #d9e1e8;
+}
+
+.education-section summary {
+    align-items: center;
+    color: #172b4d;
+    cursor: pointer;
+    display: flex;
+    font-size: 1.25rem;
+    font-weight: 700;
+    justify-content: space-between;
+    list-style: none;
+    padding: 1.25rem 0;
+}
+
+.education-section summary::-webkit-details-marker {
+    display: none;
+}
+
+.education-section summary:focus-visible {
+    outline: 2px solid #147d92;
+    outline-offset: 4px;
+}
+
+.summary-icon {
+    color: #147d92;
+    font-size: 1.75rem;
+    font-weight: 400;
+    line-height: 1;
+    transition: transform 160ms ease;
+}
+
+.education-section[open] .summary-icon {
+    transform: rotate(45deg);
+}
+
+.education-section-content {
+    padding: 0 0 1.5rem;
+}
+
+.education-section-content > p {
+    color: #5d6b7a;
+    line-height: 1.65;
+    margin: 0 0 1.25rem;
+    max-width: 48rem;
+}
+
+.qualification-table {
+    border: 1px solid #d9e1e8;
+    border-radius: 0.35rem;
+    overflow: hidden;
+}
+
+.qualification-row {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: minmax(0, 1fr) minmax(8rem, 0.35fr);
+    padding: 0.85rem 1rem;
+}
+
+.qualification-row + .qualification-row {
+    border-top: 1px solid #d9e1e8;
+}
+
+.qualification-heading {
+    background: #eef5f6;
+    color: #176271;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.qualification-row:not(.qualification-heading) span:last-child {
+    color: #5d6b7a;
+}
+
+@media (max-width: 640px) {
+    .education-section summary {
+        font-size: 1.1rem;
+    }
+
+    .qualification-row {
+        grid-template-columns: minmax(0, 1fr) minmax(6rem, 0.45fr);
+    }
+}

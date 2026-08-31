@@ -1,0 +1,129 @@
+﻿@implements IDisposable
+
+<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="">Charles Pilkington</a>
+        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(LogoutError))
+{
+    <p class="alert alert-danger m-2" role="alert">@LogoutError</p>
+}
+
+<div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
+
+    <nav class="nav flex-column">
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="/" Match="NavLinkMatch.All">
+                <span class="bi bi-house-door-fill nav-menu-icon"></span>
+                Home
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="/portfolio">
+                <span class="bi bi-folder-fill nav-menu-icon"></span>
+                Portfolio
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="/tutoring">
+                <span class="bi bi-person-video3 nav-menu-icon"></span>
+                Tutoring
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="/education">
+                <span class="bi bi-mortarboard-fill nav-menu-icon"></span>
+                Education
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="/contact">
+                <span class="bi bi-envelope-fill nav-menu-icon"></span>
+                Contact
+            </NavLink>
+        </div>
+
+        @if (AuthState.IsAuthorized)
+        {
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="/admin/portfolio">
+                    <span class="bi bi-pencil-square nav-menu-icon"></span>
+                    Edit
+                </NavLink>
+            </div>
+            <div class="nav-item px-3 admin-nav-item">
+                <button class="nav-link logout-nav-link" type="button" @onclick="Logout">
+                    <span class="bi bi-box-arrow-right nav-menu-icon"></span>
+                    Logout
+                </button>
+            </div>
+        }
+        else
+        {
+            <div class="nav-item px-3 admin-nav-item">
+                <NavLink class="nav-link" href="/admin/login">
+                    <span class="bi bi-person-lock nav-menu-icon"></span>
+                    Admin
+                </NavLink>
+            </div>
+        }
+
+    </nav>
+
+</div>
+
+@code {
+    [Inject] private AuthState AuthState { get; set; } = default!;
+    [Inject] private AuthServices AuthServices { get; set; } = default!;
+    [Inject] private NavigationManager NavigationManager { get; set; } = default!;
+
+    private bool collapseNavMenu = true;
+    private string LogoutError { get; set; } = "";
+
+    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+
+    protected override void OnInitialized()
+    {
+        AuthState.Changed += OnAuthStateChanged;
+    }
+
+    private void OnAuthStateChanged()
+    {
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private async Task Logout()
+    {
+        LogoutError = "";
+
+        try
+        {
+            await AuthServices.Logout();
+            NavigationManager.NavigateTo("/admin/login");
+        }
+        catch (HttpRequestException)
+        {
+            LogoutError = "Logout failed. Please try again.";
+        }
+    }
+
+    public void Dispose()
+    {
+        AuthState.Changed -= OnAuthStateChanged;
+    }
+}

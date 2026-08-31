@@ -116,6 +116,7 @@ executable PersonalWebsite
                     , servant
                     , servant-server
                     , warp
+                    , wai-cors
                     , HsOpenSSL
                     , http-client
                     , http-client-openssl

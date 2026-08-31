@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeOperators #-}
 
 module Main where
@@ -14,6 +15,7 @@ import Network.HTTP.Client.OpenSSL (opensslManagerSettings, withOpenSSL)
 import qualified OpenSSL.Session as SSL
 import Servant
 import Network.Wai.Handler.Warp (run)
+import Network.Wai.Middleware.Cors (CorsResourcePolicy (..), cors, simpleCorsResourcePolicy)
 import qualified Email
 import Logger (newLogger)
 
@@ -69,5 +71,12 @@ main = withOpenSSL $ do
           :<|> portfolioServer logger portfolioDB portfolioAdminDB
           :<|> tutoringServer logger tutoringDB emailSettings (notifyEmail config)
 
+    let corsPolicy = simpleCorsResourcePolicy
+          { corsOrigins = Just (["http://localhost:3000", "https://localhost:3000"], True)
+          , corsMethods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+          , corsRequestHeaders = ["Content-Type", "Authorization"]
+          }
+
     run 8080 $
-      serveWithContext api context server
+      cors (const $ Just corsPolicy) $
+        serveWithContext api context server
