@@ -1,6 +1,10 @@
 # Build output
 FrontEnd/bin/
 FrontEnd/obj/
+FrontEnd/**/bin/
+FrontEnd/**/obj/
+FrontEnd/**/Debug/
+FrontEnd/**/Release/
 BackEnd/dist-newstyle/
 
 # Visual Studio / VS Code
