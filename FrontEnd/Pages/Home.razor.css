@@ -1,0 +1,80 @@
+.home-introduction {
+    align-items: center;
+    border-bottom: 1px solid #d9e1e8;
+    display: flex;
+    gap: 2rem;
+    margin-bottom: 3rem;
+    padding: 2rem 0 2.5rem;
+}
+
+.profile-picture {
+    background: #eef5f6;
+    border: 6px solid #eef5f6;
+    border-radius: 50%;
+    height: 10rem;
+    object-fit: cover;
+    width: 10rem;
+}
+
+.introduction-copy h1 {
+    color: #172b4d;
+    font-size: clamp(2.25rem, 5vw, 4rem);
+    margin-bottom: 0.5rem;
+}
+
+.home-eyebrow {
+    color: #147d92;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+}
+
+.current-role {
+    color: #5d6b7a;
+    font-size: 1.15rem;
+    margin-bottom: 0;
+}
+
+.home-section {
+    max-width: 48rem;
+}
+
+.home-section + .home-section {
+    border-top: 1px solid #d9e1e8;
+    margin-top: 2.5rem;
+    padding-top: 2rem;
+}
+
+.home-section h2 {
+    color: #172b4d;
+    font-size: 1.75rem;
+    margin-bottom: 0.85rem;
+}
+
+.home-section p:not(.home-eyebrow) {
+    color: #5d6b7a;
+    line-height: 1.7;
+    margin-bottom: 0;
+}
+
+.research-list {
+    color: #5d6b7a;
+    line-height: 1.8;
+    margin: 0;
+    padding-left: 1.25rem;
+}
+
+@media (max-width: 640px) {
+    .home-introduction {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 1.25rem;
+    }
+
+    .profile-picture {
+        height: 7.5rem;
+        width: 7.5rem;
+    }
+}

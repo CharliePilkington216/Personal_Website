@@ -1,0 +1,15 @@
+[2026-08-31 14:59:55.94760663] Email failed to send due to request on /tutoring/inquiries, retrying
+[2026-08-31 14:59:57.919413321] Email sent due to request on /tutoring/inquiries
+[2026-08-31 15:28:22.913865421] Bad request on /auth, request made without cookies
+[2026-08-31 15:34:01.775703835] Bad request on /auth, request made without cookies
+[2026-08-31 15:34:09.163003081] Bad request on /auth, request made without cookies
+[2026-08-31 15:50:15.532063744] Internal database error on DELETE /portfolio/admin/projects call, delete project
+[2026-08-31 15:51:41.995641946] Internal database error on DELETE /portfolio/admin/projects call, delete project
+[2026-08-31 15:51:45.417842733] Internal database error on DELETE /portfolio/admin/projects call, delete project
+[2026-08-31 15:55:29.570470358] Internal database error on DELETE /portfolio/admin/projects call, delete project
+[2026-08-31 16:09:27.272831689] Bad request on /admin, request made without Authorization header
+[2026-08-31 16:09:27.27524713] Bad request on /admin, request made without Authorization header
+[2026-08-31 16:09:59.85831212] Bad request on /auth, request made without cookies
+[2026-08-31 16:10:21.514072575] Bad request on /admin, request made without Authorization header
+[2026-08-31 16:10:21.515884448] Bad request on /admin, request made without Authorization header
+[2026-08-31 16:12:53.615771378] Bad request on /auth, request made without cookies

@@ -1,16 +1,21 @@
 using System.Text.Json.Serialization;
+using System.ComponentModel.DataAnnotations;
 
 internal class TutoringRequest
 {
     [JsonPropertyName("name")]
-    public string Name { private get; init; } = "";
+    [Required]
+    public string Name { get; set; } = "";
 
     [JsonPropertyName("email")]
-    public string Email { private get; init; } = "";
+    [Required, EmailAddress]
+    public string Email { get; set; } = "";
 
     [JsonPropertyName("tutoring_category")]
-    public string TutoringCategory { private get; init; } = "";
+    [Required]
+    public string TutoringCategory { get; set; } = "";
 
     [JsonPropertyName("description")]
-    public string Description { private get; init; } = "";
+    [Required]
+    public string Description { get; set; } = "";
 }

@@ -2,6 +2,197 @@
 
 <PageTitle>Tutoring</PageTitle>
 
-<h1>Hello, world!</h1>
+@if (!string.IsNullOrEmpty(LoadError))
+{
+	<p class="alert alert-danger" role="alert">@LoadError</p>
+}
+else if (!string.IsNullOrEmpty(SuccessMessage))
+{
+	<p class="alert alert-success" role="status">@SuccessMessage</p>
+}
 
-Welcome to the tutoring section.
+<section class="tutoring-header">
+	<p class="tutoring-eyebrow">One-to-one support</p>
+	<h1>Tutoring</h1>
+	<p class="tutoring-intro">Clear, focused support for exams, applications, and the next step in your studies.</p>
+</section>
+
+<section class="service-grid" aria-label="Tutoring services">
+	<article class="service-card">
+		<p class="service-price">£20<span>/h</span></p>
+		<h2>GCSE</h2>
+		<ul>
+			<li>Exam preparation and confidence building</li>
+			<li>Past-paper practice and tailored revision</li>
+			<li>Maths, sciences, English, and humanities</li>
+		</ul>
+	</article>
+	<article class="service-card">
+		<p class="service-price">£25<span>/h</span></p>
+		<h2>A Level</h2>
+		<ul>
+			<li>Deep subject understanding and exam technique</li>
+			<li>Essay planning, problem solving, and past papers</li>
+			<li>Maths, sciences, computer science, and humanities</li>
+		</ul>
+	</article>
+	<article class="service-card service-card-featured">
+		<p class="service-price">£40<span>/h</span></p>
+		<h2>Oxbridge</h2>
+		<ul>
+			<li>Personal statement and application guidance</li>
+			<li>Admissions test preparation and mock interviews</li>
+			<li>Interview technique for technical and academic subjects</li>
+		</ul>
+	</article>
+</section>
+
+<section class="inquiry-cta">
+	<div>
+		<h2>Ready to get started?</h2>
+		<p>Tell me a little about what you would like help with.</p>
+	</div>
+	<button class="btn btn-primary" type="button" @onclick="OpenInquiry" disabled="@IsCooldownActive">Inquire now</button>
+</section>
+
+@if (ShowInquiryForm)
+{
+	<div class="inquiry-backdrop" role="presentation">
+		<section class="inquiry-dialog" role="dialog" aria-modal="true" aria-labelledby="inquiry-title">
+			<div class="dialog-heading">
+				<div>
+					<p class="tutoring-eyebrow">Start a conversation</p>
+					<h2 id="inquiry-title">Inquire now</h2>
+				</div>
+				<button class="dialog-close" type="button" aria-label="Close inquiry form" @onclick="CloseInquiry">&times;</button>
+			</div>
+
+			@if (IsSent)
+			{
+				<div class="submission-state submission-success" role="status">
+					<span class="success-icon" aria-hidden="true">&#10003;</span>
+					<p>Inquiry sent</p>
+				</div>
+			}
+			else
+			{
+				<EditForm Model="Inquiry" OnValidSubmit="SendInquiry">
+					<DataAnnotationsValidator />
+					<div class="form-field">
+						<label for="inquiry-name">Name</label>
+						<InputText id="inquiry-name" class="form-control" @bind-Value="Inquiry.Name" />
+					</div>
+					<div class="form-field">
+						<label for="inquiry-email">Email</label>
+						<InputText id="inquiry-email" type="email" class="form-control" @bind-Value="Inquiry.Email" />
+					</div>
+					<div class="form-field">
+						<label for="inquiry-type">Tutoring type</label>
+						<InputSelect id="inquiry-type" class="form-select" @bind-Value="Inquiry.TutoringCategory">
+							<option value="">Choose a service</option>
+							<option value="gcse">GCSE</option>
+							<option value="alevel">A Level</option>
+							<option value="oxbridge">Oxbridge</option>
+							<option value="other">Other</option>
+						</InputSelect>
+					</div>
+					<div class="form-field">
+						<label for="inquiry-description">What would you like help with?</label>
+						<InputTextArea id="inquiry-description" class="form-control" @bind-Value="Inquiry.Description" rows="5" />
+					</div>
+					<div class="dialog-actions">
+						<button class="btn btn-outline-secondary" type="button" @onclick="CloseInquiry" disabled="@IsSending">Cancel</button>
+						<button class="btn btn-primary" type="submit" disabled="@IsSending">
+							@if (IsSending)
+							{
+								<span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+								<span class="visually-hidden">Sending...</span>
+							}
+							else
+							{
+								<span>Send</span>
+							}
+						</button>
+					</div>
+				</EditForm>
+			}
+		</section>
+	</div>
+}
+
+@code {
+	[Inject] private TutoringServices TutoringServices { get; set; } = default!;
+
+	private TutoringRequest Inquiry { get; set; } = new();
+	private string LoadError { get; set; } = "";
+	private string SuccessMessage { get; set; } = "";
+	private bool ShowInquiryForm { get; set; }
+	private bool IsSending { get; set; }
+	private bool IsSent { get; set; }
+	private bool IsCooldownActive { get; set; }
+
+	private void OpenInquiry()
+	{
+		LoadError = "";
+		SuccessMessage = "";
+		ShowInquiryForm = true;
+	}
+
+	private void CloseInquiry()
+	{
+		if (!IsSending)
+		{
+			ShowInquiryForm = false;
+			IsSent = false;
+		}
+	}
+
+	private async Task SendInquiry()
+	{
+		if (IsSending || IsCooldownActive)
+		{
+			return;
+		}
+
+		IsSending = true;
+		LoadError = "";
+		SuccessMessage = "";
+
+		try
+		{
+			Inquiry = new TutoringRequest
+			{
+				Name = Inquiry.Name,
+				Email = Inquiry.Email,
+				TutoringCategory = Inquiry.TutoringCategory,
+				Description = Inquiry.Description
+			};
+			await TutoringServices.PostTutoringRequest(Inquiry);
+			IsSent = true;
+			SuccessMessage = "Email sent successfully.";
+			IsCooldownActive = true;
+			_ = StartCooldownAsync();
+			await Task.Delay(TimeSpan.FromSeconds(2));
+			ShowInquiryForm = false;
+			IsSent = false;
+			Inquiry = new();
+		}
+		catch (HttpRequestException ex)
+		{
+			SuccessMessage = "";
+			LoadError = $"Failed to send inquiry: {ex.Message}";
+		}
+		finally
+		{
+			IsSending = false;
+			await InvokeAsync(StateHasChanged);
+		}
+	}
+
+	private async Task StartCooldownAsync()
+	{
+		await Task.Delay(TimeSpan.FromSeconds(15));
+		IsCooldownActive = false;
+		await InvokeAsync(StateHasChanged);
+	}
+}

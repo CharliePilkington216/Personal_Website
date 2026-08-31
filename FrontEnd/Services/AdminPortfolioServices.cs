@@ -109,7 +109,7 @@ internal class AdminPortfolioServices
     {
         HttpRequestMessage httpRequest = new HttpRequestMessage(
             HttpMethod.Delete,
-            "http://localhost:8080/portfolio/admin/tags"
+                $"http://localhost:8080/portfolio/admin/tags/{tagId}"
         );
 
         httpRequest.AddAuthentication(_authState);

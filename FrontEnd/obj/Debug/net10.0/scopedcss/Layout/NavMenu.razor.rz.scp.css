@@ -75,6 +75,20 @@
     color: white;
 }
 
+.logout-nav-link[b-39jngn886s] {
+    background: transparent;
+    border: 0;
+    color: #ff6b6b;
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+}
+
+.logout-nav-link:hover[b-39jngn886s] {
+    background-color: rgba(255, 107, 107, 0.15);
+    color: #ff8585;
+}
+
 .nav-scrollable[b-39jngn886s] {
     display: flex;
     flex-direction: column;

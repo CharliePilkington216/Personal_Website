@@ -2,6 +2,157 @@
 
 <PageTitle>Portfolio</PageTitle>
 
-<h1>Hello, world!</h1>
+@if (!string.IsNullOrEmpty(LoadError))
+{
+	<p class="alert alert-danger" role="alert">@LoadError</p>
+}
 
-Welcome to the portfolio section.
+<section class="portfolio-header">
+	<p class="portfolio-eyebrow">Selected work</p>
+	<h1>Portfolio</h1>
+	<p class="portfolio-intro">A collection of projects, experiments, and things I have built.</p>
+</section>
+
+<div class="portfolio-toolbar" role="search">
+	<label class="visually-hidden" for="project-search">Search projects</label>
+	<input id="project-search" class="form-control" type="search" placeholder="Search projects..." @bind="SearchTerm" @bind:event="oninput" />
+
+	<label class="visually-hidden" for="project-sort">Sort projects</label>
+	<select id="project-sort" class="form-select" @bind="SortOption">
+		<option value="title-asc">Title, A-Z</option>
+		<option value="title-desc">Title, Z-A</option>
+		<option value="date-desc">Project date, newest</option>
+		<option value="date-asc">Project date, oldest</option>
+	</select>
+</div>
+
+@if (AvailableTags.Count > 0)
+{
+	<div class="tag-filter" aria-label="Filter projects by tag">
+		<span class="filter-label">Filter by tag</span>
+		<div class="tag-options">
+			@foreach (var tag in AvailableTags)
+			{
+				<label class="tag-option">
+					<input type="checkbox" checked="@IsTagSelected(tag.Name)" @onchange="() => ToggleTag(tag.Name)" />
+					<span>@tag.Name</span>
+				</label>
+			}
+		</div>
+	</div>
+}
+
+@if (IsLoading && Projects.Count == 0)
+{
+	<p class="portfolio-status" role="status">Loading projects...</p>
+}
+else if (!VisibleProjects.Any())
+{
+	<p class="portfolio-status" role="status">No projects match your filters.</p>
+}
+else
+{
+	<div class="project-grid">
+		@foreach (var project in VisibleProjects)
+		{
+			<article class="project-card">
+				<div class="project-card-heading">
+					<h2>@project.Title</h2>
+					<time datetime="@project.ProjectDate.ToString("yyyy-MM-dd")">@project.ProjectDate.ToString("MMM yyyy")</time>
+				</div>
+				<p>@project.Description</p>
+				@if (project.Tags.Length > 0)
+				{
+					<div class="project-tags">
+						@foreach (var tag in project.Tags)
+						{
+							<span>@tag</span>
+						}
+					</div>
+				}
+				@if (!string.IsNullOrWhiteSpace(project.ProjectLink))
+				{
+					<a class="project-link" href="@project.ProjectLink" target="_blank" rel="noopener noreferrer">View project <span aria-hidden="true">&rarr;</span></a>
+				}
+			</article>
+		}
+	</div>
+}
+
+@code {
+	[Inject] private PortfolioServices PortfolioServices { get; set; } = default!;
+	[Inject] private PortfolioCache PortfolioCache { get; set; } = default!;
+
+	private List<Project> Projects { get; set; } = [];
+	private List<Tag> AvailableTags { get; set; } = [];
+	private HashSet<string> SelectedTags { get; } = new(StringComparer.OrdinalIgnoreCase);
+	private string SearchTerm { get; set; } = "";
+	private string SortOption { get; set; } = "title-asc";
+	private bool IsLoading { get; set; }
+	private string LoadError { get; set; } = "";
+
+	private IEnumerable<Project> FilteredProjects => Projects.Where(ProjectMatchesFilters);
+
+	private IEnumerable<Project> VisibleProjects => SortOption switch
+	{
+		"date-desc" => FilteredProjects.OrderByDescending(project => project.ProjectDate),
+		"date-asc" => FilteredProjects.OrderBy(project => project.ProjectDate),
+		"title-desc" => FilteredProjects.OrderByDescending(project => project.Title, StringComparer.OrdinalIgnoreCase),
+		_ => FilteredProjects.OrderBy(project => project.Title, StringComparer.OrdinalIgnoreCase)
+	};
+
+	protected override void OnInitialized()
+	{
+		Projects = PortfolioCache.projectCache?.ToList() ?? [];
+		AvailableTags = PortfolioCache.tagCache?.ToList() ?? [];
+		_ = RefreshPortfolioAsync();
+	}
+
+	private async Task RefreshPortfolioAsync()
+	{
+		IsLoading = true;
+
+		try
+		{
+			var projectsTask = PortfolioServices.GetProjects();
+			var tagsTask = PortfolioServices.GetTags();
+			await Task.WhenAll(projectsTask, tagsTask);
+
+			Projects = (await projectsTask).ToList();
+			AvailableTags = (await tagsTask).OrderBy(tag => tag.Name, StringComparer.OrdinalIgnoreCase).ToList();
+			PortfolioCache.projectCache = Projects.ToArray();
+			PortfolioCache.tagCache = AvailableTags.ToArray();
+		}
+		catch (HttpRequestException ex)
+		{
+			LoadError = $"Failed to load projects and tags: {ex.Message}";
+		}
+		finally
+		{
+			IsLoading = false;
+			await InvokeAsync(StateHasChanged);
+		}
+	}
+
+	private bool ProjectMatchesFilters(Project project)
+	{
+		var search = SearchTerm.Trim();
+		var matchesSearch = string.IsNullOrEmpty(search)
+			|| project.Title.Contains(search, StringComparison.OrdinalIgnoreCase)
+			|| project.Description.Contains(search, StringComparison.OrdinalIgnoreCase)
+			|| project.Tags.Any(tag => tag.Contains(search, StringComparison.OrdinalIgnoreCase));
+
+		return matchesSearch && SelectedTags.All(selectedTag =>
+			project.Tags.Any(tag => string.Equals(tag, selectedTag, StringComparison.OrdinalIgnoreCase)));
+	}
+
+	private bool IsTagSelected(string tagName) => SelectedTags.Contains(tagName);
+
+	private void ToggleTag(string tagName)
+	{
+		if (!SelectedTags.Add(tagName))
+		{
+			SelectedTags.Remove(tagName);
+		}
+	}
+}

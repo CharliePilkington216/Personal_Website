@@ -1,10 +1,13 @@
 using System.Text.Json.Serialization;
+using System.ComponentModel.DataAnnotations;
 
 internal class LogInRequest
 {
     [JsonPropertyName("email")]
-    public string Email { private get; init; } = "";
+    [Required, EmailAddress]
+    public string Email { get; set; } = "";
 
     [JsonPropertyName("password")]
-    public string Password { private get; init; } = "";
+    [Required]
+    public string Password { get; set; } = "";
 }
