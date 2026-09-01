@@ -1,0 +1,439 @@
+@page "/admin/portfolio"
+
+<PageTitle>Portfolio Admin</PageTitle>
+
+@if (!string.IsNullOrEmpty(SuccessMessage))
+{
+	<p class="alert alert-success" role="status">@SuccessMessage</p>
+}
+else if (!string.IsNullOrEmpty(ErrorMessage))
+{
+	<p class="alert alert-danger" role="alert">@ErrorMessage</p>
+}
+
+<section class="portfolio-header admin-portfolio-header">
+	<p class="portfolio-eyebrow">Admin workspace</p>
+	<h1>Portfolio</h1>
+	<p class="portfolio-intro">Manage the projects and tags shown on your public portfolio.</p>
+</section>
+
+<section class="admin-tags-section">
+	<div class="section-heading">
+		<div>
+			<h2>Tags</h2>
+			<p>Use tags to organise and filter your projects.</p>
+		</div>
+		<button class="btn btn-outline-primary" type="button" @onclick="OpenAddTag">Add tag</button>
+	</div>
+	@if (IsLoading && Tags.Count == 0)
+	{
+		<p class="admin-status">Loading tags...</p>
+	}
+	else
+	{
+		<div class="admin-tag-list">
+			@foreach (var tag in Tags)
+			{
+				<div class="admin-tag">
+					<span>@tag.Tag.Name</span>
+					<button class="delete-icon" type="button" aria-label="Delete @tag.Tag.Name" @onclick="() => OpenDeleteTag(tag)">&times;</button>
+				</div>
+			}
+		</div>
+	}
+</section>
+
+<section class="admin-projects-section">
+	<div class="section-heading">
+		<div>
+			<h2>Projects</h2>
+			<p>Edit existing projects or add a new one.</p>
+		</div>
+		<button class="btn btn-primary" type="button" @onclick="OpenAddProject">Add project</button>
+	</div>
+	<div class="portfolio-toolbar" role="search">
+		<label class="visually-hidden" for="admin-project-search">Search projects</label>
+		<input id="admin-project-search" class="form-control" type="search" placeholder="Search projects..." @bind="SearchTerm" @bind:event="oninput" />
+		<label class="visually-hidden" for="admin-project-sort">Sort projects</label>
+		<select id="admin-project-sort" class="form-select" @bind="SortOption">
+			<option value="title-asc">Title, A-Z</option>
+			<option value="title-desc">Title, Z-A</option>
+			<option value="date-desc">Project date, newest</option>
+			<option value="date-asc">Project date, oldest</option>
+		</select>
+	</div>
+	@if (IsLoading && Projects.Count == 0)
+	{
+		<p class="admin-status">Loading projects...</p>
+	}
+	else if (!VisibleProjects.Any())
+	{
+		<p class="admin-status">No projects match your filters.</p>
+	}
+	else
+	{
+		<div class="project-grid">
+			@foreach (var item in VisibleProjects)
+			{
+				<article class="project-card admin-project-card">
+					<div class="project-card-heading">
+						<div>
+							<h2>@item.Project.Title</h2>
+							<time datetime="@item.Project.ProjectDate.ToString("yyyy-MM-dd")">@item.Project.ProjectDate.ToString("MMM yyyy")</time>
+						</div>
+						<button class="edit-project-button" type="button" @onclick="() => OpenEditProject(item)">Edit</button>
+					</div>
+					<p>@item.Project.Description</p>
+					<div class="project-tags">
+						@foreach (var tag in item.Project.Tags)
+						{
+							<span>@tag</span>
+						}
+					</div>
+					@if (!string.IsNullOrWhiteSpace(item.Project.ProjectLink))
+					{
+						<a class="project-link" href="@item.Project.ProjectLink" target="_blank" rel="noopener noreferrer">View project <span aria-hidden="true">&rarr;</span></a>
+					}
+				</article>
+			}
+		</div>
+	}
+</section>
+
+@if (ShowProjectForm)
+{
+	<div class="admin-modal-backdrop">
+		<section class="admin-modal" role="dialog" aria-modal="true" aria-labelledby="project-form-title">
+			<div class="modal-heading">
+				<h2 id="project-form-title">@(IsAddingProject ? "Add project" : "Edit project")</h2>
+				<button class="delete-icon" type="button" aria-label="Close project form" @onclick="CloseProjectForm">&times;</button>
+			</div>
+			<EditForm Model="EditingProject" OnValidSubmit="SaveProject">
+				<DataAnnotationsValidator />
+				<div class="form-field">
+					<label for="project-title">Title</label>
+					<InputText id="project-title" class="form-control" @bind-Value="EditingProject.Title" />
+				</div>
+				<div class="form-field">
+					<label for="project-link">Project link</label>
+					<InputText id="project-link" class="form-control" type="url" @bind-Value="EditingProject.ProjectLink" />
+				</div>
+				<div class="form-field">
+					<label for="project-date">Project date</label>
+					<InputDate id="project-date" class="form-control" @bind-Value="EditingProject.ProjectDate" />
+				</div>
+				<div class="form-field">
+					<span class="form-label">Tags</span>
+					<div class="project-tag-options">
+						@foreach (var tag in Tags)
+						{
+							<label class="project-tag-option">
+								<input type="checkbox" checked="@SelectedProjectTags.Contains(tag.Tag.Name)" @onchange="() => ToggleProjectTag(tag.Tag.Name)" />
+								@tag.Tag.Name
+							</label>
+						}
+					</div>
+				</div>
+				<div class="form-field">
+					<label for="project-description">Description</label>
+					<InputTextArea id="project-description" class="form-control" rows="5" @bind-Value="EditingProject.Description" />
+				</div>
+				<div class="modal-actions">
+					<button class="btn btn-outline-secondary" type="button" @onclick="CloseProjectForm">Cancel</button>
+					<button class="btn btn-primary" type="submit">@(IsAddingProject ? "Create" : "Apply")</button>
+				</div>
+			</EditForm>
+			@if (!IsAddingProject)
+			{
+				<button class="delete-project-button" type="button" @onclick="() => OpenDeleteProject(EditingProjectId, EditingProject.Title)">Delete project</button>
+			}
+		</section>
+	</div>
+}
+
+@if (ShowTagForm)
+{
+	<div class="admin-modal-backdrop">
+		<section class="admin-modal compact-modal" role="dialog" aria-modal="true" aria-labelledby="tag-form-title">
+			<div class="modal-heading">
+				<h2 id="tag-form-title">Add tag</h2>
+				<button class="delete-icon" type="button" aria-label="Close tag form" @onclick="CloseTagForm">&times;</button>
+			</div>
+			<EditForm Model="NewTag" OnValidSubmit="CreateTag">
+				<DataAnnotationsValidator />
+				<div class="form-field">
+					<label for="tag-name">Name</label>
+					<InputText id="tag-name" class="form-control" @bind-Value="NewTag.Name" />
+				</div>
+				<div class="modal-actions">
+					<button class="btn btn-outline-secondary" type="button" @onclick="CloseTagForm">Cancel</button>
+					<button class="btn btn-primary" type="submit">Create</button>
+				</div>
+			</EditForm>
+		</section>
+	</div>
+}
+
+@if (ConfirmationAction is not null)
+{
+	<div class="admin-modal-backdrop">
+		<section class="admin-modal compact-modal" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+			<h2 id="confirm-title">Are you sure you want to delete @ConfirmationAction.Name?</h2>
+			<p>This action cannot be undone.</p>
+			<div class="modal-actions">
+				<button class="btn btn-outline-secondary" type="button" @onclick="CancelConfirmation">No</button>
+				<button class="btn btn-danger" type="button" @onclick="ConfirmDelete">Yes</button>
+			</div>
+		</section>
+	</div>
+}
+
+@code {
+	[Inject] private AdminPortfolioServices AdminPortfolioServices { get; set; } = default!;
+	[Inject] private PortfolioCache PortfolioCache { get; set; } = default!;
+	[Inject] private AuthServices AuthServices { get; set; } = default!;
+	private List<ProjectWithId> Projects { get; set; } = [];
+	private List<TagWithId> Tags { get; set; } = [];
+	private Project EditingProject { get; set; } = NewProject();
+	private Tag NewTag { get; set; } = new Tag("");
+	private HashSet<string> SelectedProjectTags { get; } = new(StringComparer.OrdinalIgnoreCase);
+	private string EditingProjectId { get; set; } = "";
+	private string SearchTerm { get; set; } = "";
+	private string SortOption { get; set; } = "title-asc";
+	private string SuccessMessage { get; set; } = "";
+	private string ErrorMessage { get; set; } = "";
+	private bool IsLoading { get; set; }
+	private bool ShowProjectForm { get; set; }
+	private bool ShowTagForm { get; set; }
+	private bool IsAddingProject { get; set; }
+	private Confirmation? ConfirmationAction { get; set; }
+
+	private IEnumerable<ProjectWithId> FilteredProjects => Projects.Where(ProjectMatchesSearch);
+
+	private IEnumerable<ProjectWithId> VisibleProjects => SortOption switch
+	{
+		"date-desc" => FilteredProjects.OrderByDescending(item => item.Project.ProjectDate),
+		"date-asc" => FilteredProjects.OrderBy(item => item.Project.ProjectDate),
+		"title-desc" => FilteredProjects.OrderByDescending(item => item.Project.Title, StringComparer.OrdinalIgnoreCase),
+		_ => FilteredProjects.OrderBy(item => item.Project.Title, StringComparer.OrdinalIgnoreCase)
+	};
+
+	private bool ProjectMatchesSearch(ProjectWithId item)
+	{
+		var search = SearchTerm.Trim();
+		return string.IsNullOrEmpty(search)
+			|| item.Project.Title.Contains(search, StringComparison.OrdinalIgnoreCase)
+			|| item.Project.Description.Contains(search, StringComparison.OrdinalIgnoreCase)
+			|| item.Project.Tags.Any(tag => tag.Contains(search, StringComparison.OrdinalIgnoreCase));
+	}
+
+	protected override void OnInitialized()
+	{
+		Projects = PortfolioCache.adminProjectCache?.ToList() ?? [];
+		Tags = PortfolioCache.adminTagCache?.ToList() ?? [];
+		_ = RefreshPortfolioAsync();
+	}
+
+	private async Task RefreshPortfolioAsync()
+	{
+		IsLoading = true;
+		try
+		{
+			try
+			{
+				await AuthServices.Refresh();
+			}
+			catch (HttpRequestException)
+			{
+				// Continue with the current access token when no refresh cookie is available.
+			}
+
+			var projectsTask = GetProjectsWithRefreshAsync();
+			var tagsTask = GetTagsWithRefreshAsync();
+			await Task.WhenAll(projectsTask, tagsTask);
+			Projects = (await projectsTask).OrderBy(item => item.Project.Title, StringComparer.OrdinalIgnoreCase).ToList();
+			Tags = (await tagsTask).OrderBy(item => item.Tag.Name, StringComparer.OrdinalIgnoreCase).ToList();
+			PortfolioCache.adminProjectCache = Projects.ToArray();
+			PortfolioCache.adminTagCache = Tags.ToArray();
+		}
+		catch (HttpRequestException) { ErrorMessage = $"Failed to load portfolio data."; }
+		catch (InvalidOperationException) { ErrorMessage = $"Failed to load portfolio data."; }
+		finally { IsLoading = false; await InvokeAsync(StateHasChanged); }
+	}
+
+	private async Task<List<ProjectWithId>> GetProjectsWithRefreshAsync()
+	{
+		return await ExecuteWithRefreshAsync(AdminPortfolioServices.GetProjectsWithId);
+	}
+
+	private async Task<List<TagWithId>> GetTagsWithRefreshAsync()
+	{
+		return await ExecuteWithRefreshAsync(AdminPortfolioServices.GetTagsWithId);
+	}
+
+	private async Task<T> ExecuteWithRefreshAsync<T>(Func<Task<T>> request)
+	{
+		try
+		{
+			return await request();
+		}
+		catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+		{
+			await AuthServices.Refresh();
+			return await request();
+		}
+	}
+
+	private async Task ExecuteWithRefreshAsync(Func<Task> request)
+	{
+		try
+		{
+			await request();
+		}
+		catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+		{
+			await AuthServices.Refresh();
+			await request();
+		}
+	}
+
+	private static Project NewProject() => new("", "", "", [], DateTimeOffset.Now);
+
+	private void OpenAddProject()
+	{
+		ClearMessages();
+		EditingProject = NewProject();
+		EditingProjectId = "";
+		SelectedProjectTags.Clear();
+		IsAddingProject = true;
+		ShowProjectForm = true;
+	}
+
+	private void OpenEditProject(ProjectWithId item)
+	{
+		ClearMessages();
+		EditingProject = new Project(item.Project.Title, item.Project.ProjectLink, item.Project.Description, item.Project.Tags.ToArray(), item.Project.ProjectDate);
+		EditingProjectId = item.ProjectId;
+		SelectedProjectTags.Clear();
+		SelectedProjectTags.UnionWith(item.Project.Tags);
+		IsAddingProject = false;
+		ShowProjectForm = true;
+	}
+
+	private void CloseProjectForm() => ShowProjectForm = false;
+
+	private void ToggleProjectTag(string tagName)
+	{
+		if (!SelectedProjectTags.Add(tagName))
+		{
+			SelectedProjectTags.Remove(tagName);
+		}
+	}
+
+	private async Task SaveProject()
+	{
+		ClearMessages();
+		EditingProject.Tags = SelectedProjectTags.ToArray();
+		try
+		{
+			if (IsAddingProject)
+			{
+				var created = await ExecuteWithRefreshAsync(() => AdminPortfolioServices.PostProject(EditingProject));
+				Projects.Add(created);
+				SuccessMessage = $"{created.Project.Title} created";
+			}
+			else
+			{
+				var updated = await ExecuteWithRefreshAsync(() => AdminPortfolioServices.PutProject(EditingProjectId, EditingProject));
+				var index = Projects.FindIndex(item => item.ProjectId == EditingProjectId);
+				if (index >= 0)
+				{
+					Projects[index] = updated;
+				}
+				SuccessMessage = $"{updated.Project.Title} updated";
+			}
+
+			PortfolioCache.adminProjectCache = Projects.ToArray();
+			ShowProjectForm = false;
+		}
+		catch (HttpRequestException)
+		{
+			ErrorMessage = $"Project could not be saved.";
+		}
+	}
+
+	private void OpenAddTag()
+	{
+		ClearMessages();
+		NewTag = new Tag("");
+		ShowTagForm = true;
+	}
+
+	private void CloseTagForm() => ShowTagForm = false;
+
+	private async Task CreateTag()
+	{
+		ClearMessages();
+		try
+		{
+			var created = await ExecuteWithRefreshAsync(() => AdminPortfolioServices.PostTag(NewTag));
+			Tags.Add(created);
+			Tags = Tags.OrderBy(item => item.Tag.Name, StringComparer.OrdinalIgnoreCase).ToList();
+			PortfolioCache.adminTagCache = Tags.ToArray();
+			SuccessMessage = $"{created.Tag.Name} created";
+			ShowTagForm = false;
+		}
+		catch (HttpRequestException)
+		{
+			ErrorMessage = $"Tag could not be created.";
+		}
+	}
+
+	private void OpenDeleteTag(TagWithId tag) => ConfirmationAction = new("tag", tag.TagId, tag.Tag.Name);
+	private void OpenDeleteProject(string projectId, string name) => ConfirmationAction = new("project", projectId, name);
+	private void CancelConfirmation() => ConfirmationAction = null;
+
+	private async Task ConfirmDelete()
+	{
+		if (ConfirmationAction is null)
+		{
+			return;
+		}
+
+		var action = ConfirmationAction;
+		ConfirmationAction = null;
+		ClearMessages();
+		try
+		{
+			if (action.Type == "tag")
+			{
+				await ExecuteWithRefreshAsync(() => AdminPortfolioServices.DeleteTag(action.Id));
+				Tags.RemoveAll(tag => tag.TagId == action.Id);
+				Projects.ForEach(project => project.Project.Tags = project.Project.Tags
+					.Where(tag => !string.Equals(tag, action.Name, StringComparison.OrdinalIgnoreCase))
+					.ToArray());
+				PortfolioCache.adminTagCache = Tags.ToArray();
+				PortfolioCache.adminProjectCache = Projects.ToArray();
+			}
+			else
+			{
+				await ExecuteWithRefreshAsync(() => AdminPortfolioServices.DeleteProject(action.Id));
+				Projects.RemoveAll(project => project.ProjectId == action.Id);
+				PortfolioCache.adminProjectCache = Projects.ToArray();
+			}
+
+			SuccessMessage = $"{action.Name} deleted";
+		}
+		catch (HttpRequestException)
+		{
+			ErrorMessage = $"{action.Name} could not be deleted.";
+		}
+	}
+
+	private void ClearMessages()
+	{
+		SuccessMessage = "";
+		ErrorMessage = "";
+	}
+	private sealed record Confirmation(string Type, string Id, string Name);
+}

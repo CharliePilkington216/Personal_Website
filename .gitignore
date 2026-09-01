@@ -1,0 +1,33 @@
+# Build output
+FrontEnd/bin/
+FrontEnd/obj/
+FrontEnd/**/bin/
+FrontEnd/**/obj/
+FrontEnd/obj/
+FrontEnd/**/Debug/
+FrontEnd/**/Release/
+BackEnd/dist-newstyle/
+
+# Visual Studio / VS Code
+FrontEnd/.vs/
+FrontEnd.vscode/
+*.user
+*.suo
+
+# .NET
+*.userprefs
+
+# npm
+FrontEnd/node_modules/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+BackEnd/logs/server.log
