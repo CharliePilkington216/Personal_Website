@@ -104,6 +104,12 @@
     margin-top: auto;
 }
 
+@media (max-width: 640.98px) {
+    .collapse {
+        display: none;
+    }
+}
+
 @media (min-width: 641px) {
     .navbar-toggler {
         display: none;
