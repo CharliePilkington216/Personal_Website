@@ -3,27 +3,74 @@
 <PageTitle>Home</PageTitle>
 
 <section class="home-introduction">
-	<img class="profile-picture" src="icon-192.png" alt="Charles Pilkington" />
+	<img class="profile-picture" src="pfp.png" alt="Charles Pilkington" />
 	<div class="introduction-copy">
 		<p class="home-eyebrow">Hello, I'm</p>
 		<h1>Charles Pilkington</h1>
-		<p class="current-role">Software developer and tutor</p>
+		<p class="current-role">Undergraduate in Computer Science at Keble College, Oxford</p>
 	</div>
 </section>
 
 <section class="home-section about-section">
 	<p class="home-eyebrow">A little about me</p>
 	<h2>About me</h2>
-	<p>I enjoy building useful software, exploring how systems work, and helping others develop confidence in technical subjects. This site brings together my projects, education, and academic interests.</p>
+	<p>I grew up on a farm in Lancashire, in the North of England, surrounded by more fields and livestock than computers and technology. 
+        Growing up outside a major city meant that I had considerably less exposure to technology and the internet than many people my age. 
+        Despite this, I developed a strong interest in Computer Science and found that I particularly enjoyed the process of breaking down difficult 
+        problems and finding simple, elegant solutions to them. That interest eventually led me to study Computer Science at the University of Oxford.
+        <br><br>
+        My biggest area of interest is in playing Games, I have always been a competitive person, having played Tennis from a young age and loving competing 
+        against others. An aspiration of mine is to be able to conduct research into this field and develop algorithms capable of finding optimal or near optimal 
+        strategies in games. Machine Learning, and especially Reinforcement Learning is my favourite topic, due to the fact that an agent can develop strategies 
+        through experience rather than being explicitly taught how to solve a problem. Watching models discover tactics in games such as Chess that a human may 
+        never have thought of is extraordinary. Zero-sum games are especially intriguing to me due to the agents' objectives being directly opposed: a gain 
+        in reward for one agent corresponds to a loss for another. This naturally connects Reinforcement Learning with areas such as game theory and probabilistic 
+        decision-making, which are areas I am keen to explore further.
+        <br><br>
+        Outside of academia, I enjoy time with family, which includes 2 cats which I absolutely adore, play Tennis and video games with friends and just relax. 
+        Most importantly, I love what I do.
+    </p>
 </section>
 
 <section class="home-section research-section">
 	<p class="home-eyebrow">What I am exploring</p>
 	<h2>Research interests</h2>
 	<ul class="research-list">
-		<li>Programming languages and functional programming</li>
-		<li>Reliable software and API design</li>
-		<li>Database systems and information security</li>
-		<li>Human-centred approaches to technical education</li>
-	</ul>
+        <li>Artificial Intelligence and Machine Learning</li>
+        <p>I am most interested in its applications to competitive games like Chess and Poker. Rather than treating a model as a black box which simply 
+            produces an action, I am interested in understanding how models represent positions, evaluate possible decisions, and learn strategies. While machine 
+            learning may be capable of generating near optimal moves, I find the process of understanding why a model makes a decision just as interesting as the 
+            decision itself.
+            </p><br>
+        <li>Deep Reinforcement Learning</li>
+        <p>Machine Learning often comes with the caveat that a good model requires lots of data and labels, however this data may be hard to get or we may 
+            not even know what the correct label is. Deep Reinforcement Learning is an intriguing solutions for this, it allows the agent to explore the 
+            environment and learn, however we run into the One Armed Bandit problem, where we must determine how much we want the agent to explore the environment 
+            and how much we want it to capitalise on its strategy. We also run into the problem of sample efficiency, as our model changes it must gather new 
+            data to evaluate its change in policy. I am particularly interested in how we can make this learning process more efficient while still discovering strong 
+            policies. 
+        </p><br>
+        <li>Decision Making Under Uncertainty</li>
+        <p>Partially observable Markov decision processes (POMDPs) are applicable to many real world scenarios, whether it be Tennis, Poker or financial markets, 
+            the way we make decisions under uncertainty and potentially noisy information is incredible, especially when combined with the need for quick 
+            execution. Designing and creating models which make justified decisions to optimise their chance of success and do so within the allotted time is a fascinating 
+            challenge, and one which I am very interested in exploring further. 
+        </p><br>
+        <li>Multi-Agent Reinforcement Learning</li>
+        <p>What's more interesting that seeing a model adapt, several models adapting! This is the most fascinating case to watch as models interact and 
+            improve together by beating each other, with intriguing outcomes as to whether there is a dominant model or they keep adapting to each other. 
+            These algorithms can be used to simulate group behaviour and allows us to see what strategies emerge when agents compete, cooperate, betray one 
+            another, or learn to forgive previous behaviour, potentially discover strategies that would be difficult to obtain from fixed training data.
+        </p><br>
+        <li>Computational Game Theory</li>
+        <p>Computational game theory provides a rigorous framework to the study of strategic decision making in competitive environments, with it  providing rational
+            solutions to problems when the agents are self-interested and offering solutions which provide a useful theoretical foundation for understanding competitive 
+            reinforcement learning and self-play.
+        </p><br>
+        <li>Geometric Deep Learning</li>
+        <p>It is interesting to see how the structure of data can be incorporated into the design of machine learning models. It gives us a rigorous mathematical basis to 
+            derive CNNs, GNNs, Transformers and more, using symmetry, invariance and equivariance. It also provides insight into which models are best suited 
+            for certain data representations. I find the connection between mathematical structure and model architecture particularly interesting.
+        </p><br>
+    </ul>
 </section>

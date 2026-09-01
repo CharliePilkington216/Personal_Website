@@ -13,7 +13,7 @@ internal class PortfolioServices
     {
         HttpRequestMessage httpRequest = new HttpRequestMessage(
             HttpMethod.Get,
-            "http://localhost:8080/portfolio/projects"
+            "https://api.charlespilkington.dev/portfolio/projects"
         );
 
         HttpResponseMessage response = await _httpClient.SendAsync(httpRequest);
@@ -26,7 +26,7 @@ internal class PortfolioServices
     {
         HttpRequestMessage httpRequest = new HttpRequestMessage(
             HttpMethod.Get,
-            "http://localhost:8080/portfolio/tags"
+            "https://api.charlespilkington.dev/portfolio/tags"
         );
 
         HttpResponseMessage response = await _httpClient.SendAsync(httpRequest);

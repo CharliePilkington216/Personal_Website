@@ -15,7 +15,7 @@ internal class AdminPortfolioServices
     {
         HttpRequestMessage httpRequest = new HttpRequestMessage(
             HttpMethod.Get,
-            "http://localhost:8080/portfolio/admin/projects"
+            "https://api.charlespilkington.dev/portfolio/admin/projects"
         );
 
         httpRequest.AddAuthentication(_authState);
@@ -30,7 +30,7 @@ internal class AdminPortfolioServices
     {
         HttpRequestMessage httpRequest = new HttpRequestMessage(
             HttpMethod.Post,
-            "http://localhost:8080/portfolio/admin/projects"
+            "https://api.charlespilkington.dev/portfolio/admin/projects"
         );
 
         httpRequest.AddAuthentication(_authState);
@@ -47,7 +47,7 @@ internal class AdminPortfolioServices
     {
         HttpRequestMessage httpRequest = new HttpRequestMessage(
             HttpMethod.Put,
-            $"http://localhost:8080/portfolio/admin/projects/{projectId}"
+            $"https://api.charlespilkington.dev/portfolio/admin/projects/{projectId}"
         );
 
         httpRequest.AddAuthentication(_authState);
@@ -64,7 +64,7 @@ internal class AdminPortfolioServices
     {
         HttpRequestMessage httpRequest = new HttpRequestMessage(
             HttpMethod.Delete,
-            $"http://localhost:8080/portfolio/admin/projects/{projectId}"
+            $"https://api.charlespilkington.dev/portfolio/admin/projects/{projectId}"
         );
 
         httpRequest.AddAuthentication(_authState);
@@ -77,7 +77,7 @@ internal class AdminPortfolioServices
     {
         HttpRequestMessage httpRequest = new HttpRequestMessage(
             HttpMethod.Get,
-            "http://localhost:8080/portfolio/admin/tags"
+            "https://api.charlespilkington.dev/portfolio/admin/tags"
         );
 
         httpRequest.AddAuthentication(_authState);
@@ -92,7 +92,7 @@ internal class AdminPortfolioServices
     {
         HttpRequestMessage httpRequest = new HttpRequestMessage(
             HttpMethod.Post,
-            "http://localhost:8080/portfolio/admin/tags"
+            "https://api.charlespilkington.dev/portfolio/admin/tags"
         );
 
         httpRequest.AddAuthentication(_authState);
@@ -109,7 +109,7 @@ internal class AdminPortfolioServices
     {
         HttpRequestMessage httpRequest = new HttpRequestMessage(
             HttpMethod.Delete,
-                $"http://localhost:8080/portfolio/admin/tags/{tagId}"
+                $"https://api.charlespilkington.dev/portfolio/admin/tags/{tagId}"
         );
 
         httpRequest.AddAuthentication(_authState);

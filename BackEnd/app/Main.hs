@@ -72,7 +72,12 @@ main = withOpenSSL $ do
           :<|> tutoringServer logger tutoringDB emailSettings (notifyEmail config)
 
     let corsPolicy = simpleCorsResourcePolicy
-          { corsOrigins = Just (["http://localhost:3000", "https://localhost:3000"], True)
+          { corsOrigins = Just (["http://localhost:3000", 
+          "https://localhost:3000", 
+          "http://192.168.1.2:3000", 
+          "https://192.168.1.2:3000", 
+          "http://charlespilkington.dev", 
+          "https://charlespilkington.dev"], True)
           , corsMethods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
           , corsRequestHeaders = ["Content-Type", "Authorization"]
           }

@@ -3,6 +3,7 @@ FrontEnd/bin/
 FrontEnd/obj/
 FrontEnd/**/bin/
 FrontEnd/**/obj/
+FrontEnd/obj/
 FrontEnd/**/Debug/
 FrontEnd/**/Release/
 BackEnd/dist-newstyle/

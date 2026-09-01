@@ -256,8 +256,8 @@ else if (!string.IsNullOrEmpty(ErrorMessage))
 			PortfolioCache.adminProjectCache = Projects.ToArray();
 			PortfolioCache.adminTagCache = Tags.ToArray();
 		}
-		catch (HttpRequestException ex) { ErrorMessage = $"Failed to load portfolio data: {ex.Message}"; }
-		catch (InvalidOperationException ex) { ErrorMessage = $"Failed to load portfolio data: {ex.Message}"; }
+		catch (HttpRequestException) { ErrorMessage = $"Failed to load portfolio data."; }
+		catch (InvalidOperationException) { ErrorMessage = $"Failed to load portfolio data."; }
 		finally { IsLoading = false; await InvokeAsync(StateHasChanged); }
 	}
 
@@ -356,9 +356,9 @@ else if (!string.IsNullOrEmpty(ErrorMessage))
 			PortfolioCache.adminProjectCache = Projects.ToArray();
 			ShowProjectForm = false;
 		}
-		catch (HttpRequestException ex)
+		catch (HttpRequestException)
 		{
-			ErrorMessage = $"Project could not be saved: {ex.Message}";
+			ErrorMessage = $"Project could not be saved.";
 		}
 	}
 
@@ -383,9 +383,9 @@ else if (!string.IsNullOrEmpty(ErrorMessage))
 			SuccessMessage = $"{created.Tag.Name} created";
 			ShowTagForm = false;
 		}
-		catch (HttpRequestException ex)
+		catch (HttpRequestException)
 		{
-			ErrorMessage = $"Tag could not be created: {ex.Message}";
+			ErrorMessage = $"Tag could not be created.";
 		}
 	}
 
@@ -424,9 +424,9 @@ else if (!string.IsNullOrEmpty(ErrorMessage))
 
 			SuccessMessage = $"{action.Name} deleted";
 		}
-		catch (HttpRequestException ex)
+		catch (HttpRequestException)
 		{
-			ErrorMessage = $"{action.Name} could not be deleted: {ex.Message}";
+			ErrorMessage = $"{action.Name} could not be deleted.";
 		}
 	}
 

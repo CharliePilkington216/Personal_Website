@@ -14,7 +14,20 @@ else if (!string.IsNullOrEmpty(SuccessMessage))
 <section class="tutoring-header">
 	<p class="tutoring-eyebrow">One-to-one support</p>
 	<h1>Tutoring</h1>
-	<p class="tutoring-intro">Clear, focused support for exams, applications, and the next step in your studies.</p>
+	<p class="tutoring-intro">My teaching is centered around problem solving rather than simply teaching students a set of 
+        techniques to memorise. I want students to understand not only how a method works, but when and why it can be applied.
+        <br><br>
+        For more challenging questions, particularly those involving unfamiliar problems, I encourage students to talk through 
+        their thinking and break the problem down into simpler ideas that they already understand. Rather than immediately 
+        giving them the solution, I use questions and hints to help them discover the next step themselves.
+        <br><br>
+        For Oxbridge admissions and interviews, I also place a strong emphasis on communicating mathematical and 
+        computational reasoning clearly. Students should be comfortable explaining their thought process, responding to hints, 
+        and adapting their approach when an interviewer introduces a new idea.
+        <br><br>
+        I have had experience teaching people, both online and in-person, with most of my experience coming from running 
+        a Maths club which involved guiding A-level students through solving BMO, STEP and University problem sheet 
+        questions, showing them how to apply what they knew to solve these seemingly impossible questions.</p>
 </section>
 
 <section class="service-grid" aria-label="Tutoring services">
@@ -24,16 +37,16 @@ else if (!string.IsNullOrEmpty(SuccessMessage))
 		<ul>
 			<li>Exam preparation and confidence building</li>
 			<li>Past-paper practice and tailored revision</li>
-			<li>Maths, sciences, English, and humanities</li>
+			<li>Mathematics, Further Mathematics, Computer Science</li>
 		</ul>
 	</article>
 	<article class="service-card">
 		<p class="service-price">£25<span>/h</span></p>
 		<h2>A Level</h2>
 		<ul>
-			<li>Deep subject understanding and exam technique</li>
-			<li>Essay planning, problem solving, and past papers</li>
-			<li>Maths, sciences, computer science, and humanities</li>
+			<li>Deep subject insight and exam technique</li>
+			<li>Cross topic linking and understanding</li>
+			<li>Mathematics, Further Mathematics, Computer Science</li>
 		</ul>
 	</article>
 	<article class="service-card service-card-featured">
@@ -41,8 +54,8 @@ else if (!string.IsNullOrEmpty(SuccessMessage))
 		<h2>Oxbridge</h2>
 		<ul>
 			<li>Personal statement and application guidance</li>
-			<li>Admissions test preparation and mock interviews</li>
-			<li>Interview technique for technical and academic subjects</li>
+			<li>TMUA preparation and mock Computer Science interviews</li>
+			<li>Expert advice from a matriculant</li>
 		</ul>
 	</article>
 </section>
@@ -177,10 +190,10 @@ else if (!string.IsNullOrEmpty(SuccessMessage))
 			IsSent = false;
 			Inquiry = new();
 		}
-		catch (HttpRequestException ex)
+		catch (HttpRequestException)
 		{
 			SuccessMessage = "";
-			LoadError = $"Failed to send inquiry: {ex.Message}";
+			LoadError = $"Failed to send inquiry";
 		}
 		finally
 		{
