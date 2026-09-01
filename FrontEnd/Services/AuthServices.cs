@@ -15,7 +15,7 @@ internal class AuthServices
     {
         HttpRequestMessage httpRequest = new HttpRequestMessage(
             HttpMethod.Post,
-            "http://localhost:8080/auth/login"
+            "https://api.charlespilkington.dev/auth/login"
         );
 
         httpRequest.Content = JsonContent.Create(request);
@@ -40,7 +40,7 @@ internal class AuthServices
     {
         HttpRequestMessage httpRequest = new HttpRequestMessage(
             HttpMethod.Post,
-            "http://localhost:8080/auth/refresh"
+            "https://api.charlespilkington.dev/auth/refresh"
         );
 
         httpRequest.IncludeCookies();
@@ -64,7 +64,7 @@ internal class AuthServices
     {
         HttpRequestMessage httpRequest = new HttpRequestMessage(
             HttpMethod.Post,
-            "http://localhost:8080/auth/logout"
+            "https://api.charlespilkington.dev/auth/logout"
         );
 
         httpRequest.IncludeCookies();

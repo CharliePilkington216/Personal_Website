@@ -3,7 +3,7 @@
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand" href="">Charles Pilkington</a>
-        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
+        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu" @onclick:stopPropagation="true">
             <span class="navbar-toggler-icon"></span>
         </button>
     </div>

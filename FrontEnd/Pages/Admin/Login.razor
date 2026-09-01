@@ -77,9 +77,9 @@
 			await AuthServices.Login(LoginRequest);
 			NavigationManager.NavigateTo("/admin/portfolio");
 		}
-		catch (HttpRequestException ex)
+		catch (HttpRequestException)
 		{
-			LoginError = $"Login failed. Check your email and password. {ex.Message}";
+			LoginError = $"Login failed. Check your email and password.";
 		}
 		catch (InvalidOperationException)
 		{

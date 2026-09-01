@@ -10,7 +10,7 @@
 <section class="portfolio-header">
 	<p class="portfolio-eyebrow">Selected work</p>
 	<h1>Portfolio</h1>
-	<p class="portfolio-intro">A collection of projects, experiments, and things I have built.</p>
+	<p class="portfolio-intro">My collection of projects and publications, with links to more comprehensive resources.</p>
 </section>
 
 <div class="portfolio-toolbar" role="search">
@@ -123,9 +123,9 @@ else
 			PortfolioCache.projectCache = Projects.ToArray();
 			PortfolioCache.tagCache = AvailableTags.ToArray();
 		}
-		catch (HttpRequestException ex)
+		catch (HttpRequestException)
 		{
-			LoadError = $"Failed to load projects and tags: {ex.Message}";
+			LoadError = $"Failed to load projects and tags";
 		}
 		finally
 		{
