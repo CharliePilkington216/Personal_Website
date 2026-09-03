@@ -2,6 +2,191 @@ html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
+body {
+    transition: background-color 180ms ease, color 180ms ease;
+}
+
+body.dark-mode {
+    background-color: #121820;
+    color: #e6edf3;
+    color-scheme: dark;
+}
+
+body.dark-mode .page,
+body.dark-mode main,
+body.dark-mode article,
+body.dark-mode .top-row {
+    background-color: #121820;
+    color: #e6edf3;
+}
+
+body.dark-mode .top-row {
+    border-bottom-color: #34404d;
+}
+
+body.dark-mode h1,
+body.dark-mode h2,
+body.dark-mode h3,
+body.dark-mode h4,
+body.dark-mode h5,
+body.dark-mode h6,
+body.dark-mode p,
+body.dark-mode label,
+body.dark-mode li,
+body.dark-mode .form-label {
+    color: #e6edf3 !important;
+}
+
+body.dark-mode a,
+body.dark-mode .btn-link {
+    color: #66c7d6;
+}
+
+body.dark-mode input,
+body.dark-mode textarea,
+body.dark-mode select,
+body.dark-mode .form-control,
+body.dark-mode .form-select {
+    background-color: #1d2732 !important;
+    border-color: #465565 !important;
+    color: #e6edf3 !important;
+}
+
+body.dark-mode input::placeholder,
+body.dark-mode textarea::placeholder {
+    color: #9aa8b5;
+}
+
+body.dark-mode .card,
+body.dark-mode table,
+body.dark-mode th,
+body.dark-mode td {
+    background-color: #1d2732 !important;
+    border-color: #465565 !important;
+    color: #e6edf3 !important;
+}
+
+body.dark-mode .theme-toggle {
+    color: #f2c94c;
+}
+
+body.dark-mode .theme-toggle:hover {
+    background-color: rgba(255, 255, 255, 0.12);
+}
+
+body.dark-mode .portfolio-header,
+body.dark-mode .contact-header,
+body.dark-mode .education-header,
+body.dark-mode .tutoring-header,
+body.dark-mode .home-introduction,
+body.dark-mode .home-section + .home-section,
+body.dark-mode .tag-filter,
+body.dark-mode .dialog-heading {
+    border-color: #34404d !important;
+}
+
+body.dark-mode .portfolio-eyebrow,
+body.dark-mode .contact-eyebrow,
+body.dark-mode .education-eyebrow,
+body.dark-mode .tutoring-eyebrow,
+body.dark-mode .home-eyebrow,
+body.dark-mode .service-price,
+body.dark-mode .project-tags span,
+body.dark-mode .project-link,
+body.dark-mode .contact-icon,
+body.dark-mode .contact-arrow,
+body.dark-mode .success-icon {
+    color: #66c7d6 !important;
+}
+
+body.dark-mode .portfolio-intro,
+body.dark-mode .contact-intro,
+body.dark-mode .education-intro,
+body.dark-mode .tutoring-intro,
+body.dark-mode .current-role,
+body.dark-mode .home-section p:not(.home-eyebrow),
+body.dark-mode .research-list,
+body.dark-mode .project-card p,
+body.dark-mode .portfolio-status,
+body.dark-mode .contact-link small,
+body.dark-mode .service-price span,
+body.dark-mode .service-card ul,
+body.dark-mode .inquiry-cta p,
+body.dark-mode .dialog-close,
+body.dark-mode .project-card time {
+    color: #aebbc7 !important;
+}
+
+body.dark-mode .portfolio-header h1,
+body.dark-mode .contact-header h1,
+body.dark-mode .education-header h1,
+body.dark-mode .tutoring-header h1,
+body.dark-mode .introduction-copy h1,
+body.dark-mode .home-section h2,
+body.dark-mode .portfolio-toolbar,
+body.dark-mode .filter-label,
+body.dark-mode .project-card h2,
+body.dark-mode .contact-link,
+body.dark-mode .service-card h2,
+body.dark-mode .inquiry-cta h2,
+body.dark-mode .inquiry-dialog h2,
+body.dark-mode .qualification-heading,
+body.dark-mode .section-heading h2,
+body.dark-mode .form-field label {
+    color: #e6edf3 !important;
+}
+
+body.dark-mode .tag-option,
+body.dark-mode .contact-icon,
+body.dark-mode .profile-picture,
+body.dark-mode .service-card-featured,
+body.dark-mode .inquiry-cta,
+body.dark-mode .qualification-heading {
+    background-color: #1d3038 !important;
+    border-color: #376875 !important;
+}
+
+body.dark-mode .tag-option {
+    color: #b9e4e8 !important;
+}
+
+body.dark-mode .tag-option:has(input:checked) {
+    background-color: #176271 !important;
+    border-color: #66c7d6 !important;
+    color: #ffffff !important;
+}
+
+body.dark-mode .project-card,
+body.dark-mode .contact-link,
+body.dark-mode .service-card,
+body.dark-mode .qualification-row,
+body.dark-mode .admin-project-card,
+body.dark-mode .form-field,
+body.dark-mode .modal-heading {
+    border-color: #34404d !important;
+}
+
+body.dark-mode .inquiry-dialog,
+body.dark-mode .admin-modal,
+body.dark-mode .admin-login {
+    background-color: #1d2732 !important;
+    color: #e6edf3 !important;
+}
+
+body.dark-mode .contact-link:hover,
+body.dark-mode .project-card:hover {
+    background-color: #1d3038 !important;
+    border-color: #66c7d6 !important;
+}
+
+body.dark-mode .btn-primary,
+body.dark-mode .edit-project-button,
+body.dark-mode .delete-project-button {
+    background-color: #176271 !important;
+    border-color: #66c7d6 !important;
+    color: #ffffff !important;
+}
+
 h1:focus {
     outline: none;
 }

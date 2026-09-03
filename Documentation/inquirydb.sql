@@ -10,7 +10,7 @@ CREATE TABLE inquiries (
     email      TEXT           NOT NULL,
     tutoring   tutoring_type  NOT NULL,
     info       TEXT           NOT NULL,
-    status     inquiry_status NOT NULL,
+    status     inquiry_status NOT NULL DEFAULT 'pending',
     created_at TIMESTAMPTZ    NOT NULL DEFAULT now()
 );
  
